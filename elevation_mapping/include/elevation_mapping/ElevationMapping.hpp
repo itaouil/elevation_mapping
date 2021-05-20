@@ -246,6 +246,7 @@ class ElevationMapping {
  protected:
   //! Input sources.
   InputSourceManager inputSources_;
+  
   //! ROS subscribers.
   ros::Subscriber pointCloudSubscriber_;  //!< Deprecated, use input_source instead.
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;

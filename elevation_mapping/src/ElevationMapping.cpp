@@ -31,44 +31,58 @@
 
 namespace elevation_mapping {
 
+// Class constructor that takes as input only the nodehandle
+// passed from the "elevation_mapping_node.cpp" class
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       inputSources_(nodeHandle_),
       robotPoseCacheSize_(200),
-      map_(nodeHandle),
+      map_(nodeHandle), // ElevationMap type
       robotMotionMapUpdater_(nodeHandle),
-      ignoreRobotMotionUpdates_(false),
-      updatesEnabled_(true),
-      isContinuouslyFusing_(false),
+      ignoreRobotMotionUpdates_(false), // if false no motion update
+      updatesEnabled_(true), // if false no map update
+      isContinuouslyFusing_(false), // if map used after every change
       receivedFirstMatchingPointcloudAndPose_(false),
       initializeElevationMap_(false),
       initializationMethod_(0),
-      lengthInXInitSubmap_(1.2),
-      lengthInYInitSubmap_(1.8),
-      marginInitSubmap_(0.3),
+      lengthInXInitSubmap_(1.2), // width of submap of the elevatio map
+      lengthInYInitSubmap_(1.8), // height of submap of the elevation map
+      marginInitSubmap_(0.3), // margin of submap of the elevation map
       initSubmapHeightOffset_(0.0) {
   ROS_INFO("Elevation mapping node started.");
 
+  // Read parameters from within ROS
+  // server which initializes certain
+  // members of the class (such as map_, etc)
   readParameters();
+
+  // Subscribes to point cloud topic
+  // and to the robot state estimate topic
+  // as well as handles two different sensor
+  // models (one of which deprecated)
   setupSubscribers();
 
+  // Timer for the robot motion update
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
-  // Multi-threading for fusion.
+  // Trigger the fusing process for the entire elevation map and publish it
   ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
       "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
+  // Get a fused elevation submap for a requested position and size
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
       "get_submap", boost::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
   fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
 
+  // Get a raw elevation submap for a requested position and size
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
       "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
   rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
 
+  // Timer trigger to fuse and publish map
   if (!fusedMapPublishTimerDuration_.isZero()) {
     ros::TimerOptions timerOptions =
         ros::TimerOptions(fusedMapPublishTimerDuration_, boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1),
@@ -94,21 +108,31 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   initialize();
 }
 
-void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_topic and input_sources configuration.
+// Handle deprecated point_cloud_topic and input_sources configuration.
+void ElevationMapping::setupSubscribers() {
   const bool configuredInputSources = inputSources_.configureFromRos("input_sources");
   const bool hasDeprecatedPointcloudTopic = nodeHandle_.hasParam("point_cloud_topic");
+
+  // Deprecation. DO NOT USE "point_cloud_topic" parameter.
   if (hasDeprecatedPointcloudTopic) {
     ROS_WARN("Parameter 'point_cloud_topic' is deprecated, please use 'input_sources' instead.");
   }
+
+  // Fall back in case deprecated source input is used. It subscribes to
+  // the deprecated passed point cloud topic in the yaml file
   if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
     pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
         pointCloudTopic_, 1,
         std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true, std::ref(sensorProcessor_)));
   }
+
+  // Registers callback for the input source using the non-deprecated
+  // InputSourceManager and subscribes to the passed point cloud topic
   if (configuredInputSources) {
     inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
   }
 
+  // Subscribes to robot state estimation topic
   if (!robotPoseTopic_.empty()) {
     robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
     robotPoseCache_.connectInput(robotPoseSubscriber_);
@@ -150,7 +174,9 @@ ElevationMapping::~ElevationMapping() {
 }
 
 bool ElevationMapping::readParameters() {
-  // ElevationMapping parameters.
+  // Reading yaml parameters loaded in the launch file
+  // as ROS parameters and whose node handle was passed
+  // as class parameter
   nodeHandle_.param("point_cloud_topic", pointCloudTopic_, std::string("/points"));
   nodeHandle_.param("robot_pose_with_covariance_topic", robotPoseTopic_, std::string("/pose"));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, std::string("/robot"));
@@ -161,6 +187,8 @@ bool ElevationMapping::readParameters() {
   nodeHandle_.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
   ROS_ASSERT(robotPoseCacheSize_ >= 0);
 
+  // The mininum update rate (in Hz) at which the elevation map 
+  // is updated either from new measurements or the robot pose estimates.
   double minUpdateRate;
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
   if (minUpdateRate == 0.0) {
@@ -171,10 +199,12 @@ bool ElevationMapping::readParameters() {
   }
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
+  // Time tolerance between pose and pointcloud??
   double timeTolerance;
   nodeHandle_.param("time_tolerance", timeTolerance, 0.0);
   timeTolerance_.fromSec(timeTolerance);
 
+  // The rate for publishing the entire (fused) elevation map.
   double fusedMapPublishingRate;
   nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, 1.0);
   if (fusedMapPublishingRate == 0.0) {
@@ -189,6 +219,7 @@ bool ElevationMapping::readParameters() {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
 
+  // The rate (in Hz) at which the visibility clean-up is performed.
   double visibilityCleanupRate;
   nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
   if (visibilityCleanupRate == 0.0) {
@@ -203,38 +234,38 @@ bool ElevationMapping::readParameters() {
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
   map_.setFrameId(mapFrameId_);
 
+  double resolution;
   grid_map::Length length;
   grid_map::Position position;
-  double resolution;
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
+  nodeHandle_.param("resolution", resolution, 0.01);
   nodeHandle_.param("position_x", position.x(), 0.0);
   nodeHandle_.param("position_y", position.y(), 0.0);
-  nodeHandle_.param("resolution", resolution, 0.01);
   map_.setGeometry(length, resolution, position);
 
-  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
   nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.5);
+  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
+  nodeHandle_.param("scanning_duration", map_.scanningDuration_, 1.0);
   nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
-  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2));  // two-sigma
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
   nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, std::string());
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
   nodeHandle_.param("enable_continuous_cleanup", map_.enableContinuousCleanup_, false);
-  nodeHandle_.param("scanning_duration", map_.scanningDuration_, 1.0);
+  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.5);
+  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2));  // two-sigma
   nodeHandle_.param("masked_replace_service_mask_layer_name", maskedReplaceServiceMaskLayerName_, std::string("mask"));
 
   // Settings for initializing elevation map
-  nodeHandle_.param("initialize_elevation_map", initializeElevationMap_, false);
+  nodeHandle_.param("margin_init_submap", marginInitSubmap_, 0.3);
   nodeHandle_.param("initialization_method", initializationMethod_, 0);
   nodeHandle_.param("length_in_x_init_submap", lengthInXInitSubmap_, 1.2);
   nodeHandle_.param("length_in_y_init_submap", lengthInYInitSubmap_, 1.8);
-  nodeHandle_.param("margin_init_submap", marginInitSubmap_, 0.3);
   nodeHandle_.param("init_submap_height_offset", initSubmapHeightOffset_, 0.0);
+  nodeHandle_.param("initialize_elevation_map", initializeElevationMap_, false);
   nodeHandle_.param("target_frame_init_submap", targetFrameInitSubmap_, std::string("/footprint"));
 
-  // SensorProcessor parameters. Deprecated, use the sensorProcessor from within input sources instead!
+  // SensorProcessor parameters. DEPRECATED, use the sensorProcessor from within input sources instead!
   std::string sensorType;
   nodeHandle_.param("sensor_processor/type", sensorType, std::string("structured_light"));
 
