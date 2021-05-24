@@ -59,6 +59,7 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   fusedMap_.setGeometry(length, resolution, position);
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and " << rawMap_.getSize()(1) << " columns.");
 }
+
 bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp,
                        const Eigen::Affine3d& transformationSensorToMap) {
   if (static_cast<unsigned int>(pointCloud->size()) != static_cast<unsigned int>(pointCloudVariances.size())) {

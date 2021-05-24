@@ -43,7 +43,7 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
   grid_map::Matrix horizontalVarianceUpdateY(size(0), size(1));
   grid_map::Matrix horizontalVarianceUpdateXY(size(0), size(1));
 
-  // Relative convariance matrix between two robot poses.
+  // Relative covariance matrix between two robot poses.
   ReducedCovariance reducedCovariance;
   computeReducedCovariance(robotPose, robotPoseCovarianceScaled, reducedCovariance);
   ReducedCovariance relativeCovariance;
