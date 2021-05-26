@@ -137,6 +137,7 @@ void ElevationMapping::setupSubscribers() {
     robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
     robotPoseCache_.connectInput(robotPoseSubscriber_);
     robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+    ROS_INFO_STREAM("Subscribing to robot pose topic: " << robotPoseTopic_);
   } else {
     ignoreRobotMotionUpdates_ = true;
   }
@@ -385,7 +386,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
         ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(),
                   lastPointCloudUpdateTime_.toSec());
       } else {
-        ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
+        ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty? %f", lastPointCloudUpdateTime_.toSec(), robotPoseCache_.getOldestTime().toSec());
       }
       return;
     }
