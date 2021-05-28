@@ -333,6 +333,7 @@ void ElevationMapping::visibilityCleanupThread() {
 void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
                                           const SensorProcessorBase::Ptr& sensorProcessor_) {
   ROS_DEBUG("Processing data from: %s", pointCloudMsg->header.frame_id.c_str());
+  ROS_INFO_STREAM("Processing data from: " << pointCloudMsg->header.frame_id.c_str());
 
   // Check if map is to be updated or not,
   // if not it skips the update process
@@ -373,6 +374,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
+  ROS_INFO_STREAM("ElevationMap received a point cloud of " << static_cast<int>(pointCloud->size()) << "point for elevation mapping");
 
   // Get robot pose covariance matrix at timestamp of point cloud.
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
@@ -422,8 +424,12 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   // Clear the map if continuous clean-up was enabled.
   if (map_.enableContinuousCleanup_) {
     ROS_DEBUG("Clearing elevation map before adding new point cloud.");
+    ROS_INFO("Clearing elevation map before adding new point cloud.");
     map_.clear();
+    ROS_INFO("I am not stuck.....");
   }
+
+  ROS_INFO("I told you I am not stuck....");
 
   // Add point cloud to elevation map.
   if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_,
@@ -485,6 +491,8 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
     return;
   }
   ROS_DEBUG("Elevation map is fused and published from timer.");
+  ROS_INFO("Elevation map is fused and published from timer.");
+
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
   map_.publishFusedElevationMap();
@@ -509,6 +517,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
   }
 
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
+  ROS_INFO_STREAM("Updating map with latest prediction from time " << robotPoseCache_.getLatestTime().toSec());
 
   if (time + timeTolerance_ < map_.getTimeOfLastUpdate()) {
     ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
@@ -516,6 +525,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
   } else if (time < map_.getTimeOfLastUpdate()) {
     ROS_DEBUG("Requested update with time stamp %f, but time of last update was %f. Ignoring update.", time.toSec(),
               map_.getTimeOfLastUpdate().toSec());
+    ROS_INFO_STREAM("Requested update with time stamp " << time.toSec() << "but time of last update was " << map_.getTimeOfLastUpdate().toSec());
     return true;
   }
 
@@ -546,6 +556,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
 
 bool ElevationMapping::updateMapLocation() {
   ROS_DEBUG("Elevation map is checked for relocalization.");
+  ROS_INFO("Elevation map is checked for relocalization");
 
   geometry_msgs::PointStamped trackPoint;
   trackPoint.header.frame_id = trackPointFrameId_;
@@ -644,6 +655,8 @@ bool ElevationMapping::initializeElevationMap() {
         transformListener_.lookupTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), transform);
         ROS_DEBUG_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
                                                  << " z: " << transform.getOrigin().z());
+        ROS_INFO_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
+                                                   << " z: " << transform.getOrigin().z());
 
         const grid_map::Position positionRobot(transform.getOrigin().x(), transform.getOrigin().y());
 

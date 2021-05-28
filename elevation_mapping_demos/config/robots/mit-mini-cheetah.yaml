@@ -16,7 +16,7 @@ robot_pose_with_covariance_topic: "/base_footprint_pose"
 
 # The mininum update rate (in Hz) at which the elevation map is
 # updated either from new measurements or the robot pose estimates.
-min_update_rate: 20.0
+#min_update_rate: 20.0
 
 # The size (in m) of the elevation map.
 length_in_x: 6
@@ -43,7 +43,7 @@ mahalanobis_distance_threshold: 2.5
 multi_height_noise: 0.000009
 
 # The rate for publishing the entire (fused) elevation map.
-fused_map_publishing_rate: 20.0
+#fused_map_publishing_rate: 20.0
 
 # Enable/disable a separate thread that removes elements from
 # the map which are not visible anymore, by means of ray-tracing,
@@ -56,7 +56,7 @@ enable_visibility_cleanup: false
 enable_continuous_cleanup: true
 
 # The rate (in Hz) at which the visibility clean-up is performed.
-visibility_cleanup_rate: 0.0
+#visibility_cleanup_rate: 0.0
 
 # The sensor's scanning duration (in s) which is used for the visibility cleanup.
 # Set this roughly to the duration it takes between two consecutive full scans
