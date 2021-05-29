@@ -333,7 +333,7 @@ void ElevationMapping::visibilityCleanupThread() {
 void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
                                           const SensorProcessorBase::Ptr& sensorProcessor_) {
   ROS_DEBUG("Processing data from: %s", pointCloudMsg->header.frame_id.c_str());
-  ROS_INFO_STREAM("Processing data from: " << pointCloudMsg->header.frame_id.c_str());
+//  ROS_INFO_STREAM("Processing data from: " << pointCloudMsg->header.frame_id.c_str());
 
   // Check if map is to be updated or not,
   // if not it skips the update process
@@ -374,7 +374,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
-  ROS_INFO_STREAM("ElevationMap received a point cloud of " << static_cast<int>(pointCloud->size()) << "point for elevation mapping");
+//  ROS_INFO_STREAM("ElevationMap received a point cloud of " << static_cast<int>(pointCloud->size()) << "point for elevation mapping");
 
   // Get robot pose covariance matrix at timestamp of point cloud.
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
