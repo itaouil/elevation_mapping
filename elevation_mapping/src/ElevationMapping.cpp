@@ -426,10 +426,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     ROS_DEBUG("Clearing elevation map before adding new point cloud.");
     ROS_INFO("Clearing elevation map before adding new point cloud.");
     map_.clear();
-    ROS_INFO("I am not stuck.....");
   }
-
-  ROS_INFO("I told you I am not stuck....");
 
   // Add point cloud to elevation map.
   if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_,
