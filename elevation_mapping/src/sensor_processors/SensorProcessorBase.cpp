@@ -58,12 +58,14 @@ bool SensorProcessorBase::readParameters() {
 bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
                                   const PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame) {
   sensorFrameId_ = sensorFrame;
+  ROS_INFO("Sensor Processor processing for frame %s", sensorFrameId_.c_str());
   ROS_DEBUG("Sensor Processor processing for frame %s", sensorFrameId_.c_str());
 
   // Update transformation at timestamp of pointcloud
   ros::Time timeStamp;
   timeStamp.fromNSec(1000 * pointCloudInput->header.stamp);
   if (!updateTransformations(timeStamp)) {
+    ROS_INFO_STREAM("Tried to update transformation at timestamp " << timeStamp << " but failed at it...");
     return false;
   }
 
@@ -92,9 +94,13 @@ bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
   try {
     transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
 
+    ROS_INFO_STREAM("Waited for transform between " << sensorFrameId_ << " and " << generalParameters_.mapFrameId_ << " at this timestamp " << timeStamp);
+
     tf::StampedTransform transformTf;
     transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
     poseTFToEigen(transformTf, transformationSensorToMap_);
+
+    ROS_INFO_STREAM("Lookup transform between " << generalParameters_.mapFrameId_ << " and " << sensorFrameId_ << " at this timestamp " << timeStamp);
 
     transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
                                        transformTf);  // TODO(max): Why wrong direction?
@@ -103,19 +109,25 @@ bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
     rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
     translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
 
+    ROS_INFO_STREAM("Lookup transform between " << generalParameters_.robotBaseFrameId_ << " and " << sensorFrameId_ << " at this timestamp " << timeStamp);
+
     transformListener_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_, timeStamp,
                                        transformTf);  // TODO(max): Why wrong direction?
     poseTFToEigen(transformTf, transform);
     rotationMapToBase_.setMatrix(transform.rotation().matrix());
     translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
 
+    ROS_INFO_STREAM("Lookup transform between " << generalParameters_.mapFrameId_ << " and " << generalParameters_.robotBaseFrameId_ << " at this timestamp " << timeStamp);
+
     if (!firstTfAvailable_) {
+      ROS_INFO_STREAM("First available TF has been set to TRUE");
       firstTfAvailable_ = true;
     }
 
     return true;
   } catch (tf::TransformException& ex) {
     if (!firstTfAvailable_) {
+      ROS_INFO_STREAM("Transform Exception occured...");
       return false;
     }
     ROS_ERROR("%s", ex.what());
