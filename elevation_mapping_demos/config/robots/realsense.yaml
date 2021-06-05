@@ -19,7 +19,7 @@ robot_pose_with_covariance_topic: "/qxc_robot/system/pose"
 #min_update_rate: 20.0
 
 # The size (in m) of the elevation map.
-length_in_x: 6
+length_in_x: 20
 length_in_y: 4
 
 # The resolution (cell size in m/cell) of the elevation map.
@@ -43,20 +43,20 @@ mahalanobis_distance_threshold: 2.5
 multi_height_noise: 0.000009
 
 # The rate for publishing the entire (fused) elevation map.
-fused_map_publishing_rate: 0.0
+fused_map_publishing_rate: 20.0
 
 # Enable/disable a separate thread that removes elements from
 # the map which are not visible anymore, by means of ray-tracing,
 # originating from the sensor frame.
-enable_visibility_cleanup: false
+enable_visibility_cleanup: true
 
 # Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data
 # the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous
 # clean-up is enabled, visibility clean-up will automatically be disabled since it is not needed in this case.
-enable_continuous_cleanup: true
+enable_continuous_cleanup: false
 
 # The rate (in Hz) at which the visibility clean-up is performed.
-visibility_cleanup_rate: 0.0
+visibility_cleanup_rate: 20.0
 
 # The sensor's scanning duration (in s) which is used for the visibility cleanup.
 # Set this roughly to the duration it takes between two consecutive full scans
