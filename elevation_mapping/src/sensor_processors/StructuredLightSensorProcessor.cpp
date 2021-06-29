@@ -44,6 +44,7 @@ bool StructuredLightSensorProcessor::readParameters() {
 
 bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                                       const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {
+  const ros::WallTime methodStartTime(ros::WallTime::now());
   variances.resize(pointCloud->size());
 
   // Projection vector (P).
@@ -101,6 +102,8 @@ bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::Cons
     // Copy to list.
     variances(i) = heightVariance;
   }
+  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
+  std::cout << "Time to COMPUTE VARIANCES: " << duration.toSec() << std::endl;
 
   return true;
 }
