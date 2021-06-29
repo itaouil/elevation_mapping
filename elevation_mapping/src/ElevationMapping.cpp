@@ -333,7 +333,8 @@ void ElevationMapping::visibilityCleanupThread() {
 void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
                                           const SensorProcessorBase::Ptr& sensorProcessor_) {
   ROS_DEBUG("Processing data from: %s", pointCloudMsg->header.frame_id.c_str());
-//  ROS_INFO_STREAM("Processing data from: " << pointCloudMsg->header.frame_id.c_str());
+
+    const ros::WallTime methodStartTime(ros::WallTime::now());
 
   // Check if map is to be updated or not,
   // if not it skips the update process
@@ -345,6 +346,9 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     }
     return;
   }
+
+  // Get current time to compute calculation time.
+  const ros::WallTime methodStartTime1(ros::WallTime::now());
 
   // Check if point cloud has corresponding robot pose at the beginning
   if (!receivedFirstMatchingPointcloudAndPose_) {
@@ -360,11 +364,18 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     }
   }
 
+  ros::WallDuration duration1(ros::WallTime::now() - methodStartTime1);
+  std::cout << "Time to check corresponding robot pose " << duration1.toSec() << std::endl;
+
   // Stops timer for the robot
   // motion update
+  const ros::WallTime methodStartTime2(ros::WallTime::now());
   stopMapUpdateTimer();
+  ros::WallDuration duration2(ros::WallTime::now() - methodStartTime2);
+  std::cout << "Time to stop update timer " << duration2.toSec() << std::endl;
 
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
+  const ros::WallTime methodStartTime3(ros::WallTime::now());
   // TODO(max): Double check with http://wiki.ros.org/hydro/Migration
   pcl::PCLPointCloud2 pcl_pc;
   pcl_conversions::toPCL(*pointCloudMsg, pcl_pc);
@@ -372,11 +383,13 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   PointCloudType::Ptr pointCloud(new PointCloudType);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
+  ros::WallDuration duration3(ros::WallTime::now() - methodStartTime3);
+  std::cout << "POint cloud conversion " << duration3.toSec() << std::endl;
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
-//  ROS_INFO_STREAM("ElevationMap received a point cloud of " << static_cast<int>(pointCloud->size()) << "point for elevation mapping");
 
   // Get robot pose covariance matrix at timestamp of point cloud.
+  const ros::WallTime methodStartTime4(ros::WallTime::now());
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
   robotPoseCovariance.setZero();
   if (!ignoreRobotMotionUpdates_) {
@@ -394,8 +407,11 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     }
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
+  ros::WallDuration duration4(ros::WallTime::now() - methodStartTime4);
+  std::cout << "Time to get robot covariance and timestamp " << duration4.toSec() << std::endl;
 
   // Process point cloud.
+  const ros::WallTime methodStartTime5(ros::WallTime::now());
   PointCloudType::Ptr pointCloudProcessed(new PointCloudType);
   Eigen::VectorXf measurementVariances;
   if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances,
@@ -408,25 +424,35 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     resetMapUpdateTimer();
     return;
   }
+  ros::WallDuration duration5(ros::WallTime::now() - methodStartTime5);
+  std::cout << "Time to process point cloud " << duration5.toSec() << std::endl;
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   // Update map location.
+    const ros::WallTime methodStartTime6(ros::WallTime::now());
   updateMapLocation();
+    ros::WallDuration duration6(ros::WallTime::now() - methodStartTime6);
+    std::cout << "TIme to update location " << duration6.toSec() << std::endl;
 
   // Update map from motion prediction.
+    const ros::WallTime methodStartTime7(ros::WallTime::now());
   if (!updatePrediction(lastPointCloudUpdateTime_)) {
     ROS_ERROR("Updating process noise failed.");
     resetMapUpdateTimer();
     return;
   }
+    ros::WallDuration duration7(ros::WallTime::now() - methodStartTime7);
+    std::cout << "Time to update map from motion prediction " << duration7.toSec() << std::endl;
 
   // Clear the map if continuous clean-up was enabled.
+    const ros::WallTime methodStartTime8(ros::WallTime::now());
   if (map_.enableContinuousCleanup_) {
     ROS_DEBUG("Clearing elevation map before adding new point cloud.");
-    ROS_INFO("Clearing elevation map before adding new point cloud.");
     map_.clear();
   }
+    ros::WallDuration duration8(ros::WallTime::now() - methodStartTime8);
+    std::cout << "Time for continuos cleanup " << duration8.toSec() << std::endl;
 
   // Add point cloud to elevation map.
   if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_,
@@ -446,6 +472,9 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   }
 
   resetMapUpdateTimer();
+
+  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
+  std::cout << "Point cloud callback time taken " << duration.toSec() << std::endl;
 }
 
 void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
@@ -488,7 +517,6 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
     return;
   }
   ROS_DEBUG("Elevation map is fused and published from timer.");
-  ROS_INFO("Elevation map is fused and published from timer.");
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
@@ -514,7 +542,6 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
   }
 
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
-  ROS_INFO_STREAM("Updating map with latest prediction from time " << robotPoseCache_.getLatestTime().toSec());
 
   if (time + timeTolerance_ < map_.getTimeOfLastUpdate()) {
     ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
@@ -522,7 +549,6 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
   } else if (time < map_.getTimeOfLastUpdate()) {
     ROS_DEBUG("Requested update with time stamp %f, but time of last update was %f. Ignoring update.", time.toSec(),
               map_.getTimeOfLastUpdate().toSec());
-    ROS_INFO_STREAM("Requested update with time stamp " << time.toSec() << "but time of last update was " << map_.getTimeOfLastUpdate().toSec());
     return true;
   }
 
@@ -553,7 +579,6 @@ bool ElevationMapping::updatePrediction(const ros::Time& time) {
 
 bool ElevationMapping::updateMapLocation() {
   ROS_DEBUG("Elevation map is checked for relocalization.");
-  ROS_INFO("Elevation map is checked for relocalization");
 
   geometry_msgs::PointStamped trackPoint;
   trackPoint.header.frame_id = trackPointFrameId_;
@@ -652,8 +677,6 @@ bool ElevationMapping::initializeElevationMap() {
         transformListener_.lookupTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), transform);
         ROS_DEBUG_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
                                                  << " z: " << transform.getOrigin().z());
-        ROS_INFO_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
-                                                   << " z: " << transform.getOrigin().z());
 
         const grid_map::Position positionRobot(transform.getOrigin().x(), transform.getOrigin().y());
 

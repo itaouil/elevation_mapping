@@ -178,8 +178,7 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
 
   const ros::WallDuration duration = ros::WallTime::now() - methodStartTime;
   ROS_DEBUG("Raw map has been updated with a new point cloud in %f s.", duration.toSec());
-//  ROS_INFO("Raw map has been updated with a new point cloud in %f s.", duration.toSec());
-//  std::cout << "Raw-map " << duration.toSec() << std::endl;
+  std::cout << "Raw-map " << duration.toSec() << std::endl;
   return true;
 }
 
@@ -397,8 +396,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
 
   const ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_DEBUG("Elevation map has been fused in %f s.", duration.toSec());
-//  ROS_INFO("Elevation map has been fused in %f s.", duration.toSec());
-//  std::cout << "Fusion " << duration.toSec() << std::endl;
+  std::cout << "Fusion " << duration.toSec() << std::endl;
 
   return true;
 }
@@ -513,8 +511,7 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime) {
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_DEBUG("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)cellPositionsToRemove.size());
-//  ROS_INFO("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)cellPositionsToRemove.size());
-//  std::cout << "Visibility-cleanup " << duration.toSec() << std::endl;
+  std::cout << "Visibility-cleanup " << duration.toSec() << std::endl;
   if (duration.toSec() > visibilityCleanupDuration_) {
     ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
   }
@@ -557,7 +554,7 @@ bool ElevationMap::publishRawElevationMap() {
 
   bool out = postprocessorPool_.runTask(rawMapCopy);
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-//  std::cout << "publishRawElevationMap " << duration.toSec() << std::endl;
+  std::cout << "publishRawElevationMap " << duration.toSec() << std::endl;
 
   return out;
 }
@@ -577,10 +574,9 @@ bool ElevationMap::publishFusedElevationMap() {
   grid_map::GridMapRosConverter::toMessage(fusedMapCopy, message);
   elevationMapFusedPublisher_.publish(message);
   ROS_DEBUG("Elevation map (fused) has been published.");
-//  ROS_INFO("Elevation map (fused) has been published.");
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-//  std::cout << "publishFusedElevationMap " << duration.toSec() << std::endl;
+  std::cout << "publishFusedElevationMap " << duration.toSec() << std::endl;
 
   return true;
 }
