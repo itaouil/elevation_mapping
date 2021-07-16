@@ -65,6 +65,7 @@ bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::Cons
       kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
   const float epsilon = std::numeric_limits<float>::min();
 
+    const ros::WallTime methodStartTime2(ros::WallTime::now());
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     // For every point in point cloud.
 
@@ -102,8 +103,12 @@ bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::Cons
     // Copy to list.
     variances(i) = heightVariance;
   }
+  ros::WallDuration duration2(ros::WallTime::now() - methodStartTime2);
+  std::cout << "TIme to compute inner loop VARIANCES " << duration2.toSec() << std::endl;
+
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   std::cout << "Time to COMPUTE VARIANCES: " << duration.toSec() << std::endl;
+
 
   return true;
 }

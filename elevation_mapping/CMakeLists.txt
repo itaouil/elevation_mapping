@@ -64,6 +64,7 @@ target_link_libraries(${PROJECT_NAME}_pcl_types
 )
 
 add_library(${PROJECT_NAME}_library
+  #src/PCLClustering.cpp
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
   src/input_sources/Input.cpp
@@ -94,6 +95,14 @@ add_executable(${PROJECT_NAME}
 )
 
 target_link_libraries(${PROJECT_NAME}
+  ${PROJECT_NAME}_library
+)
+
+add_executable(clustering
+  src/pcl_clustering_node.cpp
+)
+
+target_link_libraries(clustering
   ${PROJECT_NAME}_library
 )
 

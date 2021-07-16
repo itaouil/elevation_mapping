@@ -7,9 +7,9 @@ input_sources:
     queue_size: 1
     publish_on_update: true
     sensor_processor:
-      apply_voxelgrid_filter: false
+      apply_voxelgrid_filter: true
       voxelgrid_filter_size: 0.1
-      ignore_points_above: inf
+      ignore_points_above: -10
       ignore_points_below: -inf
       cutoff_max_depth: 6
       cutoff_min_depth: 0.2
