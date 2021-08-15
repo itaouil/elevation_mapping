@@ -49,6 +49,11 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       lengthInYInitSubmap_(1.8), // height of submap of the elevation map
       marginInitSubmap_(0.3), // margin of submap of the elevation map
       initSubmapHeightOffset_(0.0) {
+#ifndef NDEBUG
+  // Print a warning if built in debug.
+  ROS_WARN("CMake Build Type is 'Debug'. Change to 'Release' for better performance.");
+#endif
+
   ROS_INFO("Elevation mapping node started.");
 
   // Read parameters from within ROS
@@ -61,11 +66,40 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   // as well as handles two different sensor
   // models (one of which deprecated)
   setupSubscribers();
+  setupServices();
+  setupTimers();
 
-  // Timer for the robot motion update
-  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
+  initialize();
 
-  // Trigger the fusing process for the entire elevation map and publish it
+  ROS_INFO("Successfully launched node.");
+}
+
+void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_topic and input_sources configuration.
+  const bool configuredInputSources = inputSources_.configureFromRos("input_sources");
+  const bool hasDeprecatedPointcloudTopic = nodeHandle_.hasParam("point_cloud_topic");
+  if (hasDeprecatedPointcloudTopic) {
+    ROS_WARN("Parameter 'point_cloud_topic' is deprecated, please use 'input_sources' instead.");
+  }
+  if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
+    pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
+        pointCloudTopic_, 1,
+        std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true, std::ref(sensorProcessor_)));
+  }
+  if (configuredInputSources) {
+    inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
+  }
+
+  if (!robotPoseTopic_.empty()) {
+    robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
+    robotPoseCache_.connectInput(robotPoseSubscriber_);
+    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+  } else {
+    ignoreRobotMotionUpdates_ = true;
+  }
+}
+
+void ElevationMapping::setupServices() {
+  // Multi-threading for fusion.
   ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
       "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
@@ -82,7 +116,17 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       &fusionServiceQueue_);
   rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
 
-  // Timer trigger to fuse and publish map
+  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMapServiceCallback, this);
+  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdatesServiceCallback, this);
+  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdatesServiceCallback, this);
+  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
+  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
+  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
+}
+
+void ElevationMapping::setupTimers() {
+  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
+
   if (!fusedMapPublishTimerDuration_.isZero()) {
     ros::TimerOptions timerOptions =
         ros::TimerOptions(fusedMapPublishTimerDuration_, boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1),
@@ -96,50 +140,6 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
         ros::TimerOptions(visibilityCleanupTimerDuration_, boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1),
                           &visibilityCleanupQueue_, false, false);
     visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
-  }
-
-  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMapServiceCallback, this);
-  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdatesServiceCallback, this);
-  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdatesServiceCallback, this);
-  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
-  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
-  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
-
-  initialize();
-}
-
-// Handle deprecated point_cloud_topic and input_sources configuration.
-void ElevationMapping::setupSubscribers() {
-  const bool configuredInputSources = inputSources_.configureFromRos("input_sources");
-  const bool hasDeprecatedPointcloudTopic = nodeHandle_.hasParam("point_cloud_topic");
-
-  // Deprecation. DO NOT USE "point_cloud_topic" parameter.
-  if (hasDeprecatedPointcloudTopic) {
-    ROS_WARN("Parameter 'point_cloud_topic' is deprecated, please use 'input_sources' instead.");
-  }
-
-  // Fall back in case deprecated source input is used. It subscribes to
-  // the deprecated passed point cloud topic in the yaml file
-  if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
-    pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
-        pointCloudTopic_, 1,
-        std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true, std::ref(sensorProcessor_)));
-  }
-
-  // Registers callback for the input source using the non-deprecated
-  // InputSourceManager and subscribes to the passed point cloud topic
-  if (configuredInputSources) {
-    inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
-  }
-
-  // Subscribes to robot state estimation topic
-  if (!robotPoseTopic_.empty()) {
-    robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
-    robotPoseCache_.connectInput(robotPoseSubscriber_);
-    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
-    ROS_INFO_STREAM("Subscribing to robot pose topic: " << robotPoseTopic_);
-  } else {
-    ignoreRobotMotionUpdates_ = true;
   }
 }
 
@@ -304,7 +304,6 @@ bool ElevationMapping::initialize() {
   visibilityCleanupThread_ = boost::thread(boost::bind(&ElevationMapping::visibilityCleanupThread, this));
   visibilityCleanupTimer_.start();
   initializeElevationMap();
-  ROS_INFO("Done initializing.");
   return true;
 }
 
@@ -465,7 +464,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   if (publishPointCloud) {
     // Publish elevation map.
     map_.publishRawElevationMap();
-    if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    if (isFusingEnabled()) {
       map_.fuseAll();
       map_.publishFusedElevationMap();
     }
@@ -504,7 +503,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+  if (isFusingEnabled()) {
     map_.fuseAll();
     map_.publishFusedElevationMap();
   }
@@ -534,6 +533,10 @@ bool ElevationMapping::fuseEntireMapServiceCallback(std_srvs::Empty::Request&, s
   map_.fuseAll();
   map_.publishFusedElevationMap();
   return true;
+}
+
+bool ElevationMapping::isFusingEnabled() {
+  return isContinuouslyFusing_ && map_.hasFusedMapSubscribers();
 }
 
 bool ElevationMapping::updatePrediction(const ros::Time& time) {
@@ -688,8 +691,8 @@ bool ElevationMapping::initializeElevationMap() {
                                 lengthInYInitSubmap_, marginInitSubmap_);
         return true;
       } catch (tf::TransformException& ex) {
-        ROS_ERROR("%s", ex.what());
-        ROS_ERROR("Could not initialize elevation map with constant height.");
+        ROS_DEBUG("%s", ex.what());
+        ROS_WARN("Could not initialize elevation map with constant height. (This warning can be ignored if TF tree is not available.)");
         return false;
       }
     }

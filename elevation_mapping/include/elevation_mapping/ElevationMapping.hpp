@@ -199,6 +199,16 @@ class ElevationMapping {
    */
   void setupSubscribers();
 
+  /**
+   * Sets up the services.
+   */
+  void setupServices();
+
+  /**
+   * Sets up the timers.
+   */
+  void setupTimers();
+
   /*!
    * Separate thread for all fusion service calls.
    */
@@ -236,9 +246,14 @@ class ElevationMapping {
   void stopMapUpdateTimer();
 
   /*!
-   * Initializes a submap around the robot of the elevation map with a constant height
+   * Initializes a submap around the robot of the elevation map with a constant height.
    */
   bool initializeElevationMap();
+
+  /*!
+   * Returns true if fusing the map is enabled.
+   */
+  bool isFusingEnabled();
 
   //! ROS nodehandle.
   ros::NodeHandle nodeHandle_;
