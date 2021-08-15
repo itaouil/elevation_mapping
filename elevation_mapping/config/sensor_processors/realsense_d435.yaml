@@ -9,7 +9,7 @@ input_sources:
     sensor_processor:
       apply_voxelgrid_filter: false
       voxelgrid_filter_size: 0.05
-      ignore_points_above: 2
+      ignore_points_above: 0.6
       ignore_points_below: -inf
       cutoff_max_depth: 6
       cutoff_min_depth: 0.0

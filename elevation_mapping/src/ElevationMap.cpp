@@ -76,9 +76,6 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
 
 bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp,
                        const Eigen::Affine3d& transformationSensorToMap) {
-  // Initialization for time calculation.
-  const ros::WallTime methodStartTime(ros::WallTime::now());
-
   if (static_cast<unsigned int>(pointCloud->size()) != static_cast<unsigned int>(pointCloudVariances.size())) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.", (int)pointCloud->size(),
               (int)pointCloudVariances.size());
