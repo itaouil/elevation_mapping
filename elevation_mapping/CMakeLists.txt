@@ -98,14 +98,6 @@ target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_library
 )
 
-add_executable(clustering
-  src/pcl_clustering_node.cpp
-)
-
-target_link_libraries(clustering
-  ${PROJECT_NAME}_library
-)
-
 #############
 ## Install ##
 #############
