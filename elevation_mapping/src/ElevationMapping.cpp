@@ -364,14 +364,14 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   }
 
   ros::WallDuration duration1(ros::WallTime::now() - methodStartTime1);
-  std::cout << "Time to check corresponding robot pose " << duration1.toSec() << std::endl;
+  //std::cout << "Time to check corresponding robot pose " << duration1.toSec() << std::endl;
 
   // Stops timer for the robot
   // motion update
   const ros::WallTime methodStartTime2(ros::WallTime::now());
   stopMapUpdateTimer();
   ros::WallDuration duration2(ros::WallTime::now() - methodStartTime2);
-  std::cout << "Time to stop update timer " << duration2.toSec() << std::endl;
+  //std::cout << "Time to stop update timer " << duration2.toSec() << std::endl;
 
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   const ros::WallTime methodStartTime3(ros::WallTime::now());
@@ -383,7 +383,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
   ros::WallDuration duration3(ros::WallTime::now() - methodStartTime3);
-  std::cout << "POint cloud conversion " << duration3.toSec() << std::endl;
+  //std::cout << "POint cloud conversion " << duration3.toSec() << std::endl;
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
@@ -407,7 +407,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
   ros::WallDuration duration4(ros::WallTime::now() - methodStartTime4);
-  std::cout << "Time to get robot covariance and timestamp " << duration4.toSec() << std::endl;
+  //std::cout << "Time to get robot covariance and timestamp " << duration4.toSec() << std::endl;
 
   // Process point cloud.
   const ros::WallTime methodStartTime5(ros::WallTime::now());
@@ -424,7 +424,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     return;
   }
   ros::WallDuration duration5(ros::WallTime::now() - methodStartTime5);
-  std::cout << "Time to process point cloud " << duration5.toSec() << std::endl;
+  //std::cout << "Time to process point cloud " << duration5.toSec() << std::endl;
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
@@ -432,7 +432,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     const ros::WallTime methodStartTime6(ros::WallTime::now());
   updateMapLocation();
     ros::WallDuration duration6(ros::WallTime::now() - methodStartTime6);
-    std::cout << "TIme to update location " << duration6.toSec() << std::endl;
+    //std::cout << "TIme to update location " << duration6.toSec() << std::endl;
 
   // Update map from motion prediction.
     const ros::WallTime methodStartTime7(ros::WallTime::now());
@@ -442,7 +442,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     return;
   }
     ros::WallDuration duration7(ros::WallTime::now() - methodStartTime7);
-    std::cout << "Time to update map from motion prediction " << duration7.toSec() << std::endl;
+    //std::cout << "Time to update map from motion prediction " << duration7.toSec() << std::endl;
 
   // Clear the map if continuous clean-up was enabled.
     const ros::WallTime methodStartTime8(ros::WallTime::now());
@@ -451,7 +451,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     map_.clear();
   }
     ros::WallDuration duration8(ros::WallTime::now() - methodStartTime8);
-    std::cout << "Time for continuos cleanup " << duration8.toSec() << std::endl;
+    //std::cout << "Time for continuos cleanup " << duration8.toSec() << std::endl;
 
   // Add point cloud to elevation map.
   if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_,
@@ -635,7 +635,7 @@ bool ElevationMapping::getRawSubmapServiceCallback(grid_map_msgs::GetGridMap::Re
                                                    grid_map_msgs::GetGridMap::Response& response) {
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   grid_map::Length requestedSubmapLength(request.length_x, request.length_y);
-  ROS_DEBUG("Elevation raw submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(),
+  ROS_INFO("Elevation raw submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(),
             requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
