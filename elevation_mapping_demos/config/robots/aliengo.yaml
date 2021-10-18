@@ -23,7 +23,7 @@ length_in_x: 7
 length_in_y: 7
 
 # The resolution (cell size in m/cell) of the elevation map.
-resolution: 0.04
+resolution: 0.07
 
 # The minimum and maximum values for the elevation map variance data.
 max_variance: 0.0009
