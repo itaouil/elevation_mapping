@@ -68,26 +68,26 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
     return false;
   }
     ros::WallDuration duration1(ros::WallTime::now() - methodStartTime1);
-    //std::cout << "Time to update transformation: " << duration1.toSec() << std::endl;
+  std::cout << "Time to update transformation: " << duration1.toSec() << std::endl;
 
   // Transform into sensor frame.
     const ros::WallTime methodStartTime2(ros::WallTime::now());
   PointCloudType::Ptr pointCloudSensorFrame(new PointCloudType);
   transformPointCloud(pointCloudInput, pointCloudSensorFrame, sensorFrameId_);
     ros::WallDuration duration2(ros::WallTime::now() - methodStartTime2);
-    //std::cout << "Time to transform into sensor frame: " << duration2.toSec() << std::endl;
+    std::cout << "Time to transform into sensor frame: " << duration2.toSec() << std::endl;
 
   // Remove Nans (optional voxel grid filter)
     const ros::WallTime methodStartTime3(ros::WallTime::now());
   filterPointCloud(pointCloudSensorFrame);
     ros::WallDuration duration3(ros::WallTime::now() - methodStartTime3);
-    //std::cout << "Time to remove NANS: " << duration3.toSec() << std::endl;
+    std::cout << "Time to remove NANS: " << duration3.toSec() << std::endl;
 
   // Specific filtering per sensor type
     const ros::WallTime methodStartTime4(ros::WallTime::now());
   filterPointCloudSensorType(pointCloudSensorFrame);
     ros::WallDuration duration4(ros::WallTime::now() - methodStartTime4);
-    //std::cout << "Time to perform specific filtering: " << duration4.toSec() << std::endl;
+    std::cout << "Time to perform cutoff z points: " << duration4.toSec() << std::endl;
 
   // Remove outside limits in map frame
     const ros::WallTime methodStartTime5(ros::WallTime::now());
@@ -95,13 +95,13 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
     return false;
   }
     ros::WallDuration duration5(ros::WallTime::now() - methodStartTime5);
-    //std::cout << "Time to transform point cloud: " << duration5.toSec() << std::endl;
+    std::cout << "Time to transform in robot frame: " << duration5.toSec() << std::endl;
 
     const ros::WallTime methodStartTime6(ros::WallTime::now());
   std::vector<PointCloudType::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});
   removePointsOutsideLimits(pointCloudMapFrame, pointClouds);
     ros::WallDuration duration6(ros::WallTime::now() - methodStartTime6);
-    //std::cout << "Time to remove outside points: " << duration6.toSec() << std::endl;
+    std::cout << "Time to remove outside points: " << duration6.toSec() << std::endl;
 
   // Compute variances
   return computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances);

@@ -103,12 +103,8 @@ bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::Cons
     // Copy to list.
     variances(i) = heightVariance;
   }
-  ros::WallDuration duration2(ros::WallTime::now() - methodStartTime2);
-  std::cout << "TIme to compute inner loop VARIANCES " << duration2.toSec() << std::endl;
-
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   std::cout << "Time to COMPUTE VARIANCES: " << duration.toSec() << std::endl;
-
 
   return true;
 }
