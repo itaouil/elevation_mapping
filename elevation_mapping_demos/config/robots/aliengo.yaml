@@ -19,8 +19,8 @@ robot_pose_with_covariance_topic: "/base_to_footprint_pose"
 #min_update_rate: 20.0
 
 # The size (in m) of the elevation map.
-length_in_x: 7
-length_in_y: 7
+length_in_x: 10
+length_in_y: 2
 
 # The resolution (cell size in m/cell) of the elevation map.
 resolution: 0.04

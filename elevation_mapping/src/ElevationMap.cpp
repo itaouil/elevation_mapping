@@ -35,7 +35,7 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
+      rawMap_({"elevation", "costmap", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
                "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
       postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
@@ -50,7 +50,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
       enableContinuousCleanup_(false),
       visibilityCleanupDuration_(0.0),
       scanningDuration_(1.0) {
-  rawMap_.setBasicLayers({"elevation", "variance"});
+  rawMap_.setBasicLayers({"elevation", "variance", "costmap"});
   fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
   clear();
 
