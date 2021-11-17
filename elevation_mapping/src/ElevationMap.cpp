@@ -9,14 +9,25 @@
 #include <cmath>
 #include <cstring>
 
-#include <grid_map_msgs/GridMap.h>
 #include <ros/ros.h>
 #include <Eigen/Dense>
+#include <grid_map_msgs/GridMap.h>
 
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/ElevationMapFunctors.hpp"
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
+
+#include "elevation_mapping/Instrumentor.h"
+
+#define PROFILING 0 // 0 if profiling should be disabled
+#if PROFILING
+#define PROFILE_SCOPE(name) InstrumentationTimer timer##__LINE__(name)
+//#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__) // grab function name
+#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCSIG__) // grab function signature
+#else
+#define PROFILE_SCOPE(name)
+#endif
 
 namespace {
 /**

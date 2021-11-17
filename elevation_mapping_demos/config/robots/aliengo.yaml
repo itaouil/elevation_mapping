@@ -14,7 +14,7 @@ track_point_frame_id: "base_footprint"
 #robot_pose_cache_size: 200
 robot_pose_with_covariance_topic: "/base_to_footprint_pose"
 
-# The mininum update rate (in Hz) at which the elevation map is
+# The minimum update rate (in Hz) at which the elevation map is
 # updated either from new measurements or the robot pose estimates.
 #min_update_rate: 20.0
 
