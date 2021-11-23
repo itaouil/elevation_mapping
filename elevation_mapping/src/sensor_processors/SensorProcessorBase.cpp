@@ -100,7 +100,8 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
     removePointsOutsideLimits(pointCloudMapFrame, pointClouds);
 
     // Compute variances
-    return computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances);
+//    return computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances);
+    return true;
 }
 
 bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
