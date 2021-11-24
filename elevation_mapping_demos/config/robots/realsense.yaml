@@ -16,14 +16,14 @@ robot_pose_with_covariance_topic: "/qxc_robot/system/pose"
 
 # The mininum update rate (in Hz) at which the elevation map is
 # updated either from new measurements or the robot pose estimates.
-min_update_rate: 60.0
+# min_update_rate: 60.0
 
 # The size (in m) of the elevation map.
-length_in_x: 6
-length_in_y: 2
+length_in_x: 2
+length_in_y: 6
 
 # The resolution (cell size in m/cell) of the elevation map.
-resolution: 0.02
+resolution: 0.05
 
 # The minimum and maximum values for the elevation map variance data.
 max_variance: 0.0009
