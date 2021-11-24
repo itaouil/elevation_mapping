@@ -1,5 +1,5 @@
 # The id of the tf frame of the elevation map.
-map_frame_id: "d455_link"
+map_frame_id: "world"
 
 # The id of the robot base tf frame.
 robot_base_frame_id: "d455_link"
@@ -16,11 +16,11 @@ robot_pose_with_covariance_topic: "/qxc_robot/system/pose"
 
 # The mininum update rate (in Hz) at which the elevation map is
 # updated either from new measurements or the robot pose estimates.
-min_update_rate: 60.0
+# min_update_rate: 30
 
 # The size (in m) of the elevation map.
-length_in_x: 6
-length_in_y: 2
+length_in_x: 2
+length_in_y: 6
 
 # The resolution (cell size in m/cell) of the elevation map.
 resolution: 0.05
@@ -48,7 +48,7 @@ fused_map_publishing_rate: 0.0
 # Enable/disable a separate thread that removes elements from
 # the map which are not visible anymore, by means of ray-tracing,
 # originating from the sensor frame.
-enable_visibility_cleanup: true
+enable_visibility_cleanup: false
 
 # Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data
 # the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous
@@ -67,7 +67,7 @@ visibility_cleanup_rate: 30.0
 
 # The number of threads to use for processing callbacks.
 # More threads results in higher throughput, at cost of more resource usage.
-num_callback_threads: 4
+num_callback_threads: 1
 
 # The number of threads to use for asynchronous postprocessing.
 # More threads results in higher throughput, at cost of more resource usage.
