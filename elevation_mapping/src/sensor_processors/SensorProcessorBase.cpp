@@ -105,26 +105,49 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
 
 bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
     try {
-        PROFILE_FUNCTION();
 
-        transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
+        {
+            PROFILE_SCOPE("SENSOR FRAME TO MAP FRAME");
+            transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
+        }
 
         tf::StampedTransform transformTf;
-        transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
-        poseTFToEigen(transformTf, transformationSensorToMap_);
+        {
+            PROFILE_SCOPE("MAP FRAME TO SENSOR FRAME");
+            transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
+        }
 
-        transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
-                                           transformTf);// TODO(max): Why wrong direction?
+        {
+            PROFILE_SCOPE("poseTFToEigen");
+            poseTFToEigen(transformTf, transformationSensorToMap_);
+        }
+
+        {
+            PROFILE_SCOPE("ROBOT BASE TO SENSOR FRAME");
+            transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
+                                               transformTf);// TODO(max): Why wrong direction?
+        }
+
         Eigen::Affine3d transform;
-        poseTFToEigen(transformTf, transform);
-        rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
-        translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
+        {
+            PROFILE_SCOPE("AFFINE 3D");
+            poseTFToEigen(transformTf, transform);
+            rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
+            translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
+        }
 
-        transformListener_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_, timeStamp,
-                                           transformTf);// TODO(max): Why wrong direction?
-        poseTFToEigen(transformTf, transform);
-        rotationMapToBase_.setMatrix(transform.rotation().matrix());
-        translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
+        {
+            PROFILE_SCOPE("MAP FRAME TO ROBOT BASE FRAME");
+            transformListener_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_, timeStamp,
+                                               transformTf);// TODO(max): Why wrong direction?
+        }
+
+        {
+            PROFILE_SCOPE("poseTFToEigen");
+            poseTFToEigen(transformTf, transform);
+            rotationMapToBase_.setMatrix(transform.rotation().matrix());
+            translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
+        }
 
         if (!firstTfAvailable_) {
             firstTfAvailable_ = true;

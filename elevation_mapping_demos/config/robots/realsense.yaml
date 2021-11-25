@@ -67,8 +67,8 @@ visibility_cleanup_rate: 30.0
 
 # The number of threads to use for processing callbacks.
 # More threads results in higher throughput, at cost of more resource usage.
-num_callback_threads: 1
+#num_callback_threads: 1
 
 # The number of threads to use for asynchronous postprocessing.
 # More threads results in higher throughput, at cost of more resource usage.
-postprocessor_num_threads: 1
+#postprocessor_num_threads: 1

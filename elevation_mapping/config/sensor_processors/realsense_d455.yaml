@@ -1,4 +1,4 @@
-# Written by Lefteris kotsonis and Ilyass Taouil.
+# Written by Lefteris kotsonis
 # Modeling Realsense D435 Sensor Noise for Improved 3D Reconstruction and Tracking.
 input_sources:
   camera: # A name to identify the input source
@@ -9,7 +9,7 @@ input_sources:
     sensor_processor:
       apply_voxelgrid_filter: true
       voxelgrid_filter_size: 0.02
-      ignore_points_above: 1
+      ignore_points_above: inf
       ignore_points_below: -inf
       cutoff_max_depth: inf
       cutoff_min_depth: -inf
