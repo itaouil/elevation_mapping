@@ -108,7 +108,7 @@ bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
     try {
         PROFILE_FUNCTION();
 
-        transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
+        transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(0.01));
 
         tf::StampedTransform transformTf;
         transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
@@ -136,8 +136,8 @@ bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
         if (!firstTfAvailable_) {
             return false;
         }
-        ROS_ERROR("%s", ex.what());
-        return false;
+        ROS_WARN("%s", ex.what());
+        return true;
     }
 }
 

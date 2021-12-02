@@ -18,7 +18,7 @@
   <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
     <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/realsense.yaml" />
     <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/realsense_d455.yaml" />
-<!--     <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" /> -->
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
   </node>
 
   <!-- Launch visualizations for the resulting elevation map -->

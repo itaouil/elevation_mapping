@@ -23,10 +23,11 @@
 #define PROFILING 0// 0 if profiling should be disabled
 #if PROFILING
 #define PROFILE_SCOPE(name) InstrumentationTimer timer##__LINE__(name)
-//#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__) // grab function name
-#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCSIG__)// grab function signature
+#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)// grab function name
+//#define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCSIG__) // grab function signature
 #else
 #define PROFILE_SCOPE(name)
+#define PROFILE_FUNCTION()
 #endif
 
 namespace {
@@ -457,6 +458,8 @@ namespace elevation_mapping {
     }
 
     void ElevationMap::visibilityCleanup(const ros::Time &updatedTime) {
+        PROFILE_FUNCTION();
+
         // Get current time to compute calculation time.
         const ros::WallTime methodStartTime(ros::WallTime::now());
         const double timeSinceInitialization = (updatedTime - initialTime_).toSec();
@@ -549,7 +552,6 @@ namespace elevation_mapping {
 
         ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
         ROS_DEBUG("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int) cellPositionsToRemove.size());
-        std::cout << "Visibility-cleanup " << duration.toSec() << std::endl;
         if (duration.toSec() > visibilityCleanupDuration_) {
             ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
         }
