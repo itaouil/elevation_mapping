@@ -108,7 +108,7 @@ bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
     try {
         PROFILE_FUNCTION();
 
-        transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(0.01));
+        transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(0.1));
 
         tf::StampedTransform transformTf;
         transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);

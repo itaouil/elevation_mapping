@@ -470,6 +470,11 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
         }
     }
 
+    {
+        PROFILE_SCOPE("Post Process Elevation Map");
+        map_.postProcessElevationMap();
+    }
+
     if (publishPointCloud) {
         PROFILE_SCOPE("Publish elevation map");
         // Publish elevation map.

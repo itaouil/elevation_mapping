@@ -9,6 +9,7 @@
 #pragma once
 
 // Grid Map
+#include <grid_map_cv/grid_map_cv.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
 
 // Eigen
@@ -23,6 +24,9 @@
 
 // ROS
 #include <ros/ros.h>
+
+// OpenCV
+#include "opencv2/opencv.hpp"
 
 // Elevation Mapping
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
@@ -64,6 +68,13 @@ class ElevationMap {
    */
   bool add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp,
            const Eigen::Affine3d& transformationSensorToMap);
+
+  /**
+  * Process the raw elevation map
+  * using morphological filters in order
+  * to clean it for usage.
+  */
+  void postProcessElevationMap();
 
   /*!
    * Update the elevation map with variance update data.

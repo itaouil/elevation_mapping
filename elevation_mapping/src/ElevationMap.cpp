@@ -20,7 +20,7 @@
 
 #include "elevation_mapping/Instrumentor.h"
 
-#define PROFILING 0// 0 if profiling should be disabled
+#define PROFILING 1 // 0 if profiling should be disabled
 #if PROFILING
 #define PROFILE_SCOPE(name) InstrumentationTimer timer##__LINE__(name)
 #define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)// grab function name
@@ -47,7 +47,7 @@ namespace elevation_mapping {
 
     ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
         : nodeHandle_(nodeHandle),
-          rawMap_({"elevation", "costmap", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
+          rawMap_({"elevation", "costmap", "processed_elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
                    "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
           fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
           postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
@@ -62,7 +62,7 @@ namespace elevation_mapping {
           enableContinuousCleanup_(false),
           visibilityCleanupDuration_(0.0),
           scanningDuration_(1.0) {
-        rawMap_.setBasicLayers({"elevation", "variance", "costmap"});
+        rawMap_.setBasicLayers({"elevation", "variance", "costmap", "processed_elevation"});
         fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
         clear();
 
@@ -179,12 +179,11 @@ namespace elevation_mapping {
                                           // if measurement is lower then the elevation in the map.
                 } else if (scanTimeSinceInitialization - time <= scanningDuration_) {
                     // If point is higher.
-                    elevation = point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
+                    elevation = 0.9 * elevation + 0.1 * point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
                     variance = pointVariance;
                 } else {
                     variance += multiHeightNoise_;
                 }
-                continue;
             }
 
             // Store lowest points from scan for visibility checking.
@@ -217,6 +216,56 @@ namespace elevation_mapping {
         rawMap_.setTimestamp(timestamp.toNSec());// Point cloud stores time in microseconds.
 
         return true;
+    }
+
+    void ElevationMap::postProcessElevationMap() {
+        // Convert elevation map to OpenCV
+        cv::Mat l_elevationMapImage;
+        if (!grid_map::GridMapCvConverter::toImage<float, 1>(rawMap_,
+                                                             "elevation",
+                                                             CV_32F,
+                                                             rawMap_.get("elevation").minCoeffOfFinites(),
+                                                             rawMap_.get("elevation").maxCoeffOfFinites(),
+                                                             l_elevationMapImage)) {
+            ROS_ERROR("ElevationMapProcessor: Could not convert grid_map to cv::Mat.");
+        }
+
+        // Change possible NaN values in the map to 0
+//    cv::patchNaNs(l_elevationMapImage, 0.0);
+
+//    cv::imshow("Elevation Map OpenCV image (nans patched)", l_elevationMapImage);
+//    cv::waitKey(0);
+
+        // Dilate elevation map image to fill sparse regions
+        cv::Mat l_elevationMapImageDilated;
+        cv::dilate(l_elevationMapImage, l_elevationMapImageDilated, cv::Mat());
+
+//        cv::imshow("Elevation Map OpenCV image (dilated)", l_elevationMapImageDilated);
+//        cv::waitKey(0);
+
+        // Erode elevation map to eliminate extraneous sensor returns
+        cv::Mat l_elevationMapImageEroded;
+        cv::erode(l_elevationMapImageDilated, l_elevationMapImageEroded, cv::Mat());
+
+//        cv::imshow("Elevation Map OpenCV image (eroded)", l_elevationMapImageEroded);
+//        cv::waitKey(0);
+
+        // Blur elevation map image to reduce noise
+//        cv::Mat l_elevationMapBlurred;
+//        cv::GaussianBlur(l_elevationMapImageEroded, l_elevationMapBlurred, cv::Size(3, 3), 0, 0);
+
+//        cv::imshow("Original Image", l_elevationMapImage);
+//        cv::imshow("Blurred Image", l_elevationMapBlurred);
+//        cv::waitKey(0);
+
+        ROS_INFO_STREAM(rawMap_.get("elevation").minCoeffOfFinites() << ", " << rawMap_.get("elevation").maxCoeffOfFinites());
+
+        // Change elevation layer to processed image
+        grid_map::GridMapCvConverter::addLayerFromImage<float, 1>(l_elevationMapImageEroded,
+                                                                  "processed_elevation",
+                                                                  rawMap_,
+                                                                  rawMap_.get("elevation").minCoeffOfFinites(),
+                                                                  rawMap_.get("elevation").maxCoeffOfFinites());
     }
 
     bool ElevationMap::update(const grid_map::Matrix &varianceUpdate, const grid_map::Matrix &horizontalVarianceUpdateX,
@@ -441,19 +490,12 @@ namespace elevation_mapping {
     bool ElevationMap::clear() {
         // Lock raw and fused map object in different scopes to prevent deadlock.
         {
-            ROS_INFO("Clearing raw map first....");
             boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
             rawMap_.clearAll();
             rawMap_.resetTimestamp();
             rawMap_.get("dynamic_time").setZero();
         }
-        {
-            ROS_INFO("Now clearing fused map....");
-            boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
-            fusedMap_.clearAll();
-            fusedMap_.resetTimestamp();
-        }
-        ROS_INFO("Clearing process finished....");
+
         return true;
     }
 
@@ -598,7 +640,6 @@ namespace elevation_mapping {
 
         bool out = postprocessorPool_.runTask(rawMapCopy);
         ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-        std::cout << "publishRawElevationMap " << duration.toSec() << std::endl;
 
         return out;
     }
@@ -643,7 +684,6 @@ namespace elevation_mapping {
         grid_map::GridMapRosConverter::toMessage(visibilityCleanupMapCopy, message);
         visibilityCleanupMapPublisher_.publish(message);
         ROS_DEBUG("Visibility cleanup map has been published.");
-        ROS_INFO("Visibility cleanup map has been published.");
         return true;
     }
 

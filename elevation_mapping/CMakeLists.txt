@@ -28,8 +28,9 @@ find_package(catkin REQUIRED
     ${CATKIN_PACKAGE_DEPENDENCIES}
 )
 
-find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV 3.4 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system)
 
 catkin_package(
   INCLUDE_DIRS
@@ -49,6 +50,7 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     ${Eigen_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
 )
 
 ###########
@@ -64,7 +66,6 @@ target_link_libraries(${PROJECT_NAME}_pcl_types
 )
 
 add_library(${PROJECT_NAME}_library
-  #src/PCLClustering.cpp
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
   src/input_sources/Input.cpp
@@ -96,6 +97,7 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   ${PROJECT_NAME}_library
+  ${OpenCV_LIBRARIES}
 )
 
 #############
