@@ -5,7 +5,7 @@ import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-# Callaback
+
 def odom_callback(msg, arg):
     publisher = arg
 
@@ -17,22 +17,17 @@ def odom_callback(msg, arg):
     # Publish message
     publisher.publish(new_message)
 
+
 if __name__ == '__main__':
     rospy.init_node('odom_to_pose')
 
     topic_name = rospy.get_param('~from_frame')
     publisher_name = rospy.get_param('~to_frame')
 
-    # topic_name = "/qxc_robot/system/odom"
-    # publisher_name = "/base_footprint"
-
     publisher = rospy.Publisher(publisher_name, PoseWithCovarianceStamped, queue_size=1)
-
-    rate = rospy.Rate(20)
 
     if topic_name == '' or publisher_name == '':
         rospy.logerr("Could not get subscriber's topic name or publisher's topics name. Exiting...")
     else:
         while not rospy.is_shutdown():
             rospy.Subscriber(topic_name, Odometry, odom_callback, publisher)
-            rate.sleep()

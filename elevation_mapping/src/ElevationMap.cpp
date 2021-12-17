@@ -207,7 +207,6 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
 
   const ros::WallDuration duration = ros::WallTime::now() - methodStartTime;
   ROS_DEBUG("Raw map has been updated with a new point cloud in %f s.", duration.toSec());
-  std::cout << "Raw-map " << duration.toSec() << std::endl;
   return true;
 }
 
@@ -570,9 +569,6 @@ bool ElevationMap::publishRawElevationMap() {
     return false;
   }
 
-  // Get current time to compute calculation time.
-  const ros::WallTime methodStartTime(ros::WallTime::now());
-
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
@@ -588,8 +584,6 @@ bool ElevationMap::publishRawElevationMap() {
   rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
 
   bool out = postprocessorPool_.runTask(rawMapCopy);
-  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-  std::cout << "publishRawElevationMap " << duration.toSec() << std::endl;
 
   return out;
 }

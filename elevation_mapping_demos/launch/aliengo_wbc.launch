@@ -2,11 +2,11 @@
 
 <launch>
 
-  <!-- Publish odom as pose -->
-<!--   <node pkg="elevation_mapping_demos" type="odom_to_pose.py" name="my_pose_publisher" output="screen"> -->
-<!--     <param name="from_frame" type="string" value="/qxc_robot/system/odom" /> -->
-<!--     <param name="to_frame" type="string" value="/pose" /> -->
-<!--   </node> -->
+   Publish odom as pose
+   <node pkg="elevation_mapping_demos" type="odom_to_pose.py" name="my_pose_publisher" output="screen">
+     <param name="from_frame" type="string" value="/aliengo/ground_truth" />
+     <param name="to_frame" type="string" value="/pose" />
+   </node>
 
   <!-- Publish tf 'base_footprint' as pose.-->
 <!--  <node pkg="elevation_mapping_demos" type="tf_to_pose_publisher.py" name="mit_mini_cheetah_pose_publisher">-->
@@ -16,8 +16,8 @@
 
   <!-- Launch elevation mapping node. -->
   <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-    <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/aliengo.yaml" />
-    <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/realsense_d455.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/aliengo_wbc.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/asus_xtion.yaml" />
     <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
   </node>
 
