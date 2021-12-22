@@ -3,6 +3,7 @@
 # Imports
 import rospy
 from nav_msgs.msg import Odometry
+from wb_controller.msg import ComTask
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
 
@@ -12,7 +13,7 @@ def odom_callback(msg, arg):
     # New PWCS message
     new_message = PoseWithCovarianceStamped()
     new_message.header = msg.header
-    new_message.pose = msg.pose
+    new_message.pose.pose.position = msg.position_actual
 
     # Publish message
     publisher.publish(new_message)
@@ -29,5 +30,5 @@ if __name__ == '__main__':
     if topic_name == '' or publisher_name == '':
         rospy.logerr("Could not get subscriber's topic name or publisher's topics name. Exiting...")
     else:
-        while not rospy.is_shutdown():
-            rospy.Subscriber(topic_name, Odometry, odom_callback, publisher)
+        rospy.Subscriber(topic_name, ComTask, odom_callback, publisher)
+        rospy.spin()

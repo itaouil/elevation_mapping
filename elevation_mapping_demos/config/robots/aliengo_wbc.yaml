@@ -5,7 +5,7 @@ map_frame_id: "world"
 robot_base_frame_id: "trunk"
 
 # The elevation map is moved along with the robot following a track point.
-track_point_x: 0.0
+track_point_x: 3.0
 track_point_y: 0.0
 track_point_z: 0.0
 track_point_frame_id: "trunk"
