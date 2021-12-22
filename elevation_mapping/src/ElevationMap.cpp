@@ -230,33 +230,17 @@ namespace elevation_mapping {
             ROS_ERROR("ElevationMapProcessor: Could not convert grid_map to cv::Mat.");
         }
 
-        // Change possible NaN values in the map to 0
-//    cv::patchNaNs(l_elevationMapImage, 0.0);
-
-//    cv::imshow("Elevation Map OpenCV image (nans patched)", l_elevationMapImage);
-//    cv::waitKey(0);
-
         // Dilate elevation map image to fill sparse regions
         cv::Mat l_elevationMapImageDilated;
         cv::dilate(l_elevationMapImage, l_elevationMapImageDilated, cv::Mat());
-
-//        cv::imshow("Elevation Map OpenCV image (dilated)", l_elevationMapImageDilated);
-//        cv::waitKey(0);
 
         // Erode elevation map to eliminate extraneous sensor returns
         cv::Mat l_elevationMapImageEroded;
         cv::erode(l_elevationMapImageDilated, l_elevationMapImageEroded, cv::Mat());
 
-//        cv::imshow("Elevation Map OpenCV image (eroded)", l_elevationMapImageEroded);
-//        cv::waitKey(0);
-
-        // Blur elevation map image to reduce noise
-//        cv::Mat l_elevationMapBlurred;
-//        cv::GaussianBlur(l_elevationMapImageEroded, l_elevationMapBlurred, cv::Size(3, 3), 0, 0);
-
-//        cv::imshow("Original Image", l_elevationMapImage);
-//        cv::imshow("Blurred Image", l_elevationMapBlurred);
-//        cv::waitKey(0);
+        // Apply median filter
+        cv::Mat l_elevationMapImageFiltered;
+        cv::medianBlur(l_elevationMapImageEroded, l_elevationMapImageFiltered, 3);
 
         ROS_INFO_STREAM(rawMap_.get("elevation").minCoeffOfFinites() << ", " << rawMap_.get("elevation").maxCoeffOfFinites());
 
