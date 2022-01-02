@@ -10,6 +10,7 @@
 
 // Grid Map
 #include <grid_map_cv/grid_map_cv.hpp>
+#include <grid_map_cv/grid_map_cv.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
 
 // Eigen

@@ -46,29 +46,32 @@ namespace {
 namespace elevation_mapping {
 
     ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
-        : nodeHandle_(nodeHandle),
-          rawMap_({"elevation", "costmap", "processed_elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
-                   "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
-          fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
-          postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
-          hasUnderlyingMap_(false),
-          minVariance_(0.000009),
-          maxVariance_(0.0009),
-          mahalanobisDistanceThreshold_(2.5),
-          multiHeightNoise_(0.000009),
-          minHorizontalVariance_(0.0001),
-          maxHorizontalVariance_(0.05),
-          enableVisibilityCleanup_(true),
-          enableContinuousCleanup_(false),
-          visibilityCleanupDuration_(0.0),
-          scanningDuration_(1.0) {
+            : nodeHandle_(nodeHandle),
+              rawMap_({"elevation", "costmap", "processed_elevation", "variance", "horizontal_variance_x",
+                       "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
+                       "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan",
+                       "sensor_z_at_lowest_scan"}),
+              fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
+              postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
+              hasUnderlyingMap_(false),
+              minVariance_(0.000009),
+              maxVariance_(0.0009),
+              mahalanobisDistanceThreshold_(2.5),
+              multiHeightNoise_(0.000009),
+              minHorizontalVariance_(0.0001),
+              maxHorizontalVariance_(0.05),
+              enableVisibilityCleanup_(true),
+              enableContinuousCleanup_(false),
+              visibilityCleanupDuration_(0.0),
+              scanningDuration_(1.0) {
         rawMap_.setBasicLayers({"elevation", "variance", "costmap", "processed_elevation"});
         fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
         clear();
 
         elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
         if (!underlyingMapTopic_.empty()) {
-            underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
+            underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1,
+                                                             &ElevationMap::underlyingMapCallback, this);
         }
         // TODO(max): if (enableVisibilityCleanup_) when parameter cleanup is ready.
         visibilityCleanupMapPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("visibility_cleanup_map", 1);
@@ -78,15 +81,18 @@ namespace elevation_mapping {
 
     ElevationMap::~ElevationMap() = default;
 
-    void ElevationMap::setGeometry(const grid_map::Length &length, const double &resolution, const grid_map::Position &position) {
+    void ElevationMap::setGeometry(const grid_map::Length &length, const double &resolution,
+                                   const grid_map::Position &position) {
         boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
         boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
         rawMap_.setGeometry(length, resolution, position);
         fusedMap_.setGeometry(length, resolution, position);
-        ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and " << rawMap_.getSize()(1) << " columns.");
+        ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and " << rawMap_.getSize()(1)
+                                                         << " columns.");
     }
 
-    bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf &pointCloudVariances, const ros::Time &timestamp,
+    bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf &pointCloudVariances,
+                           const ros::Time &timestamp,
                            const Eigen::Affine3d &transformationSensorToMap) {
 //        if (static_cast<unsigned int>(pointCloud->size()) != static_cast<unsigned int>(pointCloudVariances.size())) {
 //            ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.", (int) pointCloud->size(),
@@ -97,7 +103,8 @@ namespace elevation_mapping {
         // Initialization for time calculation.
         const ros::WallTime methodStartTime(ros::WallTime::now());
         const ros::Time currentTime(ros::Time::now());
-        const float currentTimeSecondsPattern{intAsFloat(static_cast<uint32_t>(static_cast<uint64_t>(currentTime.toSec())))};
+        const float currentTimeSecondsPattern{
+                intAsFloat(static_cast<uint32_t>(static_cast<uint64_t>(currentTime.toSec())))};
         boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
 
         // Update initial time if it is not initialized.
@@ -122,7 +129,7 @@ namespace elevation_mapping {
 
         // Push all basic map layers to vector
         std::vector<Eigen::Ref<const grid_map::Matrix>> basicLayers_;
-        for (const std::string &layer : rawMap_.getBasicLayers()) {
+        for (const std::string &layer: rawMap_.getBasicLayers()) {
             basicLayers_.push_back(rawMap_.get(layer));
         }
 
@@ -158,7 +165,9 @@ namespace elevation_mapping {
 //            const float &pointVariance = pointCloudVariances(i);
             const float &pointVariance = 0;
             bool isValid = std::all_of(basicLayers_.begin(), basicLayers_.end(),
-                                       [&](Eigen::Ref<const grid_map::Matrix> layer) { return std::isfinite(layer(index(0), index(1))); });
+                                       [&](Eigen::Ref<const grid_map::Matrix> layer) {
+                                           return std::isfinite(layer(index(0), index(1)));
+                                       });
             if (!isValid) {
                 // No prior information in elevation map, use measurement.
                 elevation = point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -171,12 +180,13 @@ namespace elevation_mapping {
             }
 
             // Deal with multiple heights in one cell.
-            const double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);// NOLINT(cppcoreguidelines-pro-type-union-access)
+            const double mahalanobisDistance =
+                    fabs(point.z - elevation) / sqrt(variance);// NOLINT(cppcoreguidelines-pro-type-union-access)
             if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
                 if (scanTimeSinceInitialization - time <= scanningDuration_ &&
                     elevation > point.z) {// NOLINT(cppcoreguidelines-pro-type-union-access)
-                                          // Ignore point if measurement is from the same point cloud (time comparison) and
-                                          // if measurement is lower then the elevation in the map.
+                    // Ignore point if measurement is from the same point cloud (time comparison) and
+                    // if measurement is lower then the elevation in the map.
                 } else if (scanTimeSinceInitialization - time <= scanningDuration_) {
                     // If point is higher.
                     elevation = 0.9 * elevation + 0.1 * point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
@@ -242,7 +252,8 @@ namespace elevation_mapping {
         cv::Mat l_elevationMapImageFiltered;
         cv::medianBlur(l_elevationMapImageEroded, l_elevationMapImageFiltered, 3);
 
-        ROS_INFO_STREAM(rawMap_.get("elevation").minCoeffOfFinites() << ", " << rawMap_.get("elevation").maxCoeffOfFinites());
+        ROS_INFO_STREAM(
+                rawMap_.get("elevation").minCoeffOfFinites() << ", " << rawMap_.get("elevation").maxCoeffOfFinites());
 
         // Change elevation layer to processed image
         grid_map::GridMapCvConverter::addLayerFromImage<float, 1>(l_elevationMapImageEroded,
@@ -253,7 +264,8 @@ namespace elevation_mapping {
     }
 
     bool ElevationMap::update(const grid_map::Matrix &varianceUpdate, const grid_map::Matrix &horizontalVarianceUpdateX,
-                              const grid_map::Matrix &horizontalVarianceUpdateY, const grid_map::Matrix &horizontalVarianceUpdateXY,
+                              const grid_map::Matrix &horizontalVarianceUpdateY,
+                              const grid_map::Matrix &horizontalVarianceUpdateXY,
                               const ros::Time &time) {
         boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
 
@@ -285,7 +297,8 @@ namespace elevation_mapping {
     }
 
     bool ElevationMap::fuseArea(const Eigen::Vector2d &position, const Eigen::Array2d &length) {
-        ROS_DEBUG("Requested to fuse an area of the elevation map with center at (%f, %f) and side lengths (%f, %f)", position[0], position[1],
+        ROS_DEBUG("Requested to fuse an area of the elevation map with center at (%f, %f) and side lengths (%f, %f)",
+                  position[0], position[1],
                   length[0], length[1]);
 
         grid_map::Index topLeftIndex;
@@ -298,8 +311,10 @@ namespace elevation_mapping {
 
         boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
-        grid_map::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, position, length,
-                                       rawMap_.getLength(), rawMap_.getPosition(), rawMap_.getResolution(), rawMap_.getSize(),
+        grid_map::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength,
+                                       requestedIndexInSubmap, position, length,
+                                       rawMap_.getLength(), rawMap_.getPosition(), rawMap_.getResolution(),
+                                       rawMap_.getSize(),
                                        rawMap_.getStartIndex());
 
         return fuse(topLeftIndex, submapBufferSize);
@@ -341,7 +356,8 @@ namespace elevation_mapping {
         }
 
         // For each cell in requested area.
-        for (grid_map::SubmapIterator areaIterator(rawMapCopy, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
+        for (grid_map::SubmapIterator areaIterator(rawMapCopy, topLeftIndex,
+                                                   size); !areaIterator.isPastEnd(); ++areaIterator) {
             // Check if fusion for this cell has already been done earlier.
             if (fusedMap_.isValid(*areaIterator)) {
                 continue;
@@ -371,15 +387,18 @@ namespace elevation_mapping {
             Eigen::Array2d::Index minEigenvalueIndex;
             maxEigenvalueIndex == Eigen::Array2d::Index(0) ? minEigenvalueIndex = 1 : minEigenvalueIndex = 0;
             const grid_map::Length ellipseLength =
-                    2.0 * uncertaintyFactor * grid_map::Length(eigenvalues(maxEigenvalueIndex), eigenvalues(minEigenvalueIndex)).sqrt() +
+                    2.0 * uncertaintyFactor *
+                    grid_map::Length(eigenvalues(maxEigenvalueIndex), eigenvalues(minEigenvalueIndex)).sqrt() +
                     ellipseExtension;
             const double ellipseRotation(
-                    atan2(solver.eigenvectors().col(maxEigenvalueIndex).real()(1), solver.eigenvectors().col(maxEigenvalueIndex).real()(0)));
+                    atan2(solver.eigenvectors().col(maxEigenvalueIndex).real()(1),
+                          solver.eigenvectors().col(maxEigenvalueIndex).real()(0)));
 
             // Requested length and position (center) of submap in map.
             grid_map::Position requestedSubmapPosition;
             rawMapCopy.getPosition(*areaIterator, requestedSubmapPosition);
-            grid_map::EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation);
+            grid_map::EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength,
+                                                      ellipseRotation);
 
             // Prepare data fusion.
             Eigen::ArrayXf means, weights;
@@ -414,12 +433,17 @@ namespace elevation_mapping {
                 // Compute weight from probability.
                 grid_map::Position absolutePosition;
                 rawMapCopy.getPosition(*ellipseIterator, absolutePosition);
-                Eigen::Vector2d distanceToCenter = (rotationMatrix * (absolutePosition - requestedSubmapPosition)).cwiseAbs();
+                Eigen::Vector2d distanceToCenter = (rotationMatrix *
+                                                    (absolutePosition - requestedSubmapPosition)).cwiseAbs();
 
-                float probability1 = cumulativeDistributionFunction(distanceToCenter.x() + halfResolution, 0.0, maxStandardDeviation) -
-                                     cumulativeDistributionFunction(distanceToCenter.x() - halfResolution, 0.0, maxStandardDeviation);
-                float probability2 = cumulativeDistributionFunction(distanceToCenter.y() + halfResolution, 0.0, minStandardDeviation) -
-                                     cumulativeDistributionFunction(distanceToCenter.y() - halfResolution, 0.0, minStandardDeviation);
+                float probability1 = cumulativeDistributionFunction(distanceToCenter.x() + halfResolution, 0.0,
+                                                                    maxStandardDeviation) -
+                                     cumulativeDistributionFunction(distanceToCenter.x() - halfResolution, 0.0,
+                                                                    maxStandardDeviation);
+                float probability2 = cumulativeDistributionFunction(distanceToCenter.y() + halfResolution, 0.0,
+                                                                    minStandardDeviation) -
+                                     cumulativeDistributionFunction(distanceToCenter.y() - halfResolution, 0.0,
+                                                                    minStandardDeviation);
 
                 const float weight = std::max(minimalWeight, probability1 * probability2);
                 weights[i] = weight;
@@ -434,9 +458,11 @@ namespace elevation_mapping {
                 // Nothing to fuse.
                 fusedMap_.at("elevation", *areaIterator) = rawMapCopy.at("elevation", *areaIterator);
                 fusedMap_.at("lower_bound", *areaIterator) =
-                        rawMapCopy.at("elevation", *areaIterator) - 2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
+                        rawMapCopy.at("elevation", *areaIterator) -
+                        2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
                 fusedMap_.at("upper_bound", *areaIterator) =
-                        rawMapCopy.at("elevation", *areaIterator) + 2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
+                        rawMapCopy.at("elevation", *areaIterator) +
+                        2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
                 fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
                 continue;
             }
@@ -514,7 +540,8 @@ namespace elevation_mapping {
                 continue;
             }
             grid_map::Index indexAtSensor;
-            if (!visibilityCleanupMap_.getIndex(grid_map::Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) {
+            if (!visibilityCleanupMap_.getIndex(grid_map::Position(sensorXatLowestScan, sensorYatLowestScan),
+                                                indexAtSensor)) {
                 continue;
             }
             grid_map::Position point;
@@ -523,13 +550,16 @@ namespace elevation_mapping {
             float pointDiffY = point.y() - sensorYatLowestScan;
             float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
             if (distanceToPoint > 0.0) {
-                for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor, *iterator); !iterator.isPastEnd(); ++iterator) {
+                for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor,
+                                                     *iterator); !iterator.isPastEnd(); ++iterator) {
                     grid_map::Position cellPosition;
                     visibilityCleanupMap_.getPosition(*iterator, cellPosition);
                     const float cellDiffX = cellPosition.x() - sensorXatLowestScan;
                     const float cellDiffY = cellPosition.y() - sensorYatLowestScan;
                     const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
-                    const float maxHeightPoint = lowestScanPoint + (sensorZatLowestScan - lowestScanPoint) / distanceToPoint * distanceToCell;
+                    const float maxHeightPoint = lowestScanPoint +
+                                                 (sensorZatLowestScan - lowestScanPoint) / distanceToPoint *
+                                                 distanceToCell;
                     auto &cellMaxHeight = visibilityCleanupMap_.at("max_height", *iterator);
                     if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
                         cellMaxHeight = maxHeightPoint;
@@ -561,7 +591,7 @@ namespace elevation_mapping {
 
         // Remove points in current raw map.
         scopedLockForRawData.lock();
-        for (const auto &cellPosition : cellPositionsToRemove) {
+        for (const auto &cellPosition: cellPositionsToRemove) {
             grid_map::Index index;
             if (!rawMap_.getIndex(cellPosition, index)) {
                 continue;
@@ -577,7 +607,8 @@ namespace elevation_mapping {
         publishVisibilityCleanupMap();
 
         ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-        ROS_DEBUG("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int) cellPositionsToRemove.size());
+        ROS_DEBUG("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(),
+                  (int) cellPositionsToRemove.size());
         if (duration.toSec() > visibilityCleanupDuration_) {
             ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
         }
@@ -588,7 +619,8 @@ namespace elevation_mapping {
         std::vector<grid_map::BufferRegion> newRegions;
 
         if (rawMap_.move(position, newRegions)) {
-            ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
+            ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(),
+                      rawMap_.getPosition().y());
 
             // The "dynamic_time" layer is meant to be interpreted as integer values, therefore nan:s need to be zeroed.
             grid_map::Matrix &dynTime{rawMap_.get("dynamic_time")};
@@ -619,8 +651,10 @@ namespace elevation_mapping {
         rawMapCopy.erase("sensor_z_at_lowest_scan");
         rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
         rawMapCopy.add("horizontal_standard_deviation",
-                       (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
-        rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
+                       (rawMapCopy.get("horizontal_variance_x") +
+                        rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
+        rawMapCopy.add("two_sigma_bound",
+                       rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
 
         bool out = postprocessorPool_.runTask(rawMapCopy);
         ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
@@ -721,11 +755,14 @@ namespace elevation_mapping {
 
     bool ElevationMap::clean() {
         boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
-        rawMap_.get("variance") = rawMap_.get("variance").unaryExpr(VarianceClampOperator<float>(minVariance_, maxVariance_));
+        rawMap_.get("variance") = rawMap_.get("variance").unaryExpr(
+                VarianceClampOperator<float>(minVariance_, maxVariance_));
         rawMap_.get("horizontal_variance_x") =
-                rawMap_.get("horizontal_variance_x").unaryExpr(VarianceClampOperator<float>(minHorizontalVariance_, maxHorizontalVariance_));
+                rawMap_.get("horizontal_variance_x").unaryExpr(
+                        VarianceClampOperator<float>(minHorizontalVariance_, maxHorizontalVariance_));
         rawMap_.get("horizontal_variance_y") =
-                rawMap_.get("horizontal_variance_y").unaryExpr(VarianceClampOperator<float>(minHorizontalVariance_, maxHorizontalVariance_));
+                rawMap_.get("horizontal_variance_y").unaryExpr(
+                        VarianceClampOperator<float>(minHorizontalVariance_, maxHorizontalVariance_));
         return true;
     }
 
@@ -761,7 +798,8 @@ namespace elevation_mapping {
         ROS_INFO("Updating underlying map.");
         grid_map::GridMapRosConverter::fromMessage(underlyingMap, underlyingMap_);
         if (underlyingMap_.getFrameId() != rawMap_.getFrameId()) {
-            ROS_ERROR_STREAM("The underlying map does not have the same map frame ('" << underlyingMap_.getFrameId() << "') as the elevation map ('"
+            ROS_ERROR_STREAM("The underlying map does not have the same map frame ('" << underlyingMap_.getFrameId()
+                                                                                      << "') as the elevation map ('"
                                                                                       << rawMap_.getFrameId() << "').");
             return;
         }
@@ -786,13 +824,15 @@ namespace elevation_mapping {
         rawMap_.addDataFrom(underlyingMap_, false, false, true);
     }
 
-    void ElevationMap::setRawSubmapHeight(const grid_map::Position &initPosition, float mapHeight, double lengthInXSubmap,
-                                          double lengthInYSubmap, double margin) {
+    void
+    ElevationMap::setRawSubmapHeight(const grid_map::Position &initPosition, float mapHeight, double lengthInXSubmap,
+                                     double lengthInYSubmap, double margin) {
         // Set a submap area (lengthInYSubmap + margin, lengthInXSubmap + margin) with a constant height (mapHeight).
         boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
 
         // Calculate submap iterator start index.
-        const grid_map::Position topLeftPosition(initPosition(0) + lengthInXSubmap / 2, initPosition(1) + lengthInYSubmap / 2);
+        const grid_map::Position topLeftPosition(initPosition(0) + lengthInXSubmap / 2,
+                                                 initPosition(1) + lengthInYSubmap / 2);
         grid_map::Index submapTopLeftIndex;
         rawMap_.getIndex(topLeftPosition, submapTopLeftIndex);
 
@@ -805,7 +845,8 @@ namespace elevation_mapping {
         // Iterate through submap and fill height values.
         grid_map::Matrix &elevationData = rawMap_["elevation"];
         grid_map::Matrix &varianceData = rawMap_["variance"];
-        for (grid_map::SubmapIterator iterator(rawMap_, submapTopLeftIndex, submapBufferSize); !iterator.isPastEnd(); ++iterator) {
+        for (grid_map::SubmapIterator iterator(rawMap_, submapTopLeftIndex,
+                                               submapBufferSize); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index index(*iterator);
             elevationData(index(0), index(1)) = mapHeight;
             varianceData(index(0), index(1)) = 0.0;
