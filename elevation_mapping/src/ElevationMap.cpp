@@ -229,6 +229,18 @@ namespace elevation_mapping {
     }
 
     void ElevationMap::postProcessElevationMap() {
+        // Keep track of which entries are NaNs
+        std::vector<int> l_xIndices;
+        std::vector<int> l_yIndices;
+        for (int i = 0; i < rawMap_.getSize()(0); i++) {
+            for (int j = 0; j < rawMap_.getSize()(1); j++) {
+                if (std::isnan(rawMap_["elevation"](i, j))) {
+                    l_xIndices.push_back(i);
+                    l_yIndices.push_back(j);
+                }
+            }
+        }
+
         // Convert elevation map to OpenCV
         cv::Mat l_elevationMapImage;
         if (!grid_map::GridMapCvConverter::toImage<float, 1>(rawMap_,
@@ -248,19 +260,21 @@ namespace elevation_mapping {
         cv::Mat l_elevationMapImageEroded;
         cv::erode(l_elevationMapImageDilated, l_elevationMapImageEroded, cv::Mat());
 
-        // Apply median filter
+        // Apply median filter to smooth while preserving borders
         cv::Mat l_elevationMapImageFiltered;
         cv::medianBlur(l_elevationMapImageEroded, l_elevationMapImageFiltered, 3);
 
-        ROS_INFO_STREAM(
-                rawMap_.get("elevation").minCoeffOfFinites() << ", " << rawMap_.get("elevation").maxCoeffOfFinites());
-
         // Change elevation layer to processed image
-        grid_map::GridMapCvConverter::addLayerFromImage<float, 1>(l_elevationMapImageEroded,
+        grid_map::GridMapCvConverter::addLayerFromImage<float, 1>(l_elevationMapImageFiltered,
                                                                   "processed_elevation",
                                                                   rawMap_,
                                                                   rawMap_.get("elevation").minCoeffOfFinites(),
                                                                   rawMap_.get("elevation").maxCoeffOfFinites());
+
+        // Place back NaNs in processed elevation layer
+        for (int i = 0; i < l_xIndices.size(); i++) {
+            rawMap_["processed_elevation"](l_xIndices[i], l_yIndices[i]) = NAN;
+        }
     }
 
     bool ElevationMap::update(const grid_map::Matrix &varianceUpdate, const grid_map::Matrix &horizontalVarianceUpdateX,
