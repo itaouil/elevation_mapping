@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+   <!-- Publish odom as pose -->
+   <node pkg="elevation_mapping_demos" type="odom_to_pose.py" name="my_pose_publisher" output="screen">
+     <param name="from_frame" type="string" value="/t265/odom/sample" />
+     <param name="to_frame" type="string" value="/pose" />
+   </node>
+
+  <!-- Launch elevation mapping node. -->
+  <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/aliengo_real.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/realsense_d435.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
+  </node>
+
+  <!-- Launch visualizations for the resulting elevation map -->
+  <include file="$(find elevation_mapping_demos)/launch/visualization.launch" />
+
+  <!-- Launch RViz with the demo configuration -->
+  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find elevation_mapping_demos)/rviz/elevation_map_visualization_pointcloud.rviz" /> -->
+
+</launch>

@@ -1,0 +1,23 @@
+# Written by Lefteris kotsonis and Ilyass Taouil.
+# Written by Lefteris kotsonis and Ilyass Taouil.
+# Modeling Realsense D435 Sensor Noise for Improved 3D Reconstruction and Tracking.
+input_sources:
+  camera: # A name to identify the input source
+    type: pointcloud # Supported types: pointcloud
+    topic: /d400/depth/color/points # your topic
+    queue_size: 1
+    publish_on_update: true
+    sensor_processor:
+      apply_voxelgrid_filter: true
+      voxelgrid_filter_size: 0.02
+      ignore_points_above: inf
+      ignore_points_below: -inf
+      cutoff_max_depth: inf
+      cutoff_min_depth: -inf
+      type: structured_light # https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8768489
+      normal_factor_a: 0.001063
+      normal_factor_b: 0.003949
+      normal_factor_c: 0.0
+      normal_factor_d: 0.0008278
+      normal_factor_e: 1
+      lateral_factor: 0.01576 # approx 1 deg
