@@ -47,8 +47,8 @@ namespace elevation_mapping {
 
     ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
             : nodeHandle_(nodeHandle),
-              rawMap_({"elevation", "costmap", "processed_elevation", "variance", "horizontal_variance_x",
-                       "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
+              rawMap_({"elevation", "costmap", "processed_elevation", "variance", "distance",
+                       "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
                        "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan",
                        "sensor_z_at_lowest_scan"}),
               fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
@@ -64,7 +64,7 @@ namespace elevation_mapping {
               enableContinuousCleanup_(false),
               visibilityCleanupDuration_(0.0),
               scanningDuration_(1.0) {
-        rawMap_.setBasicLayers({"elevation", "variance", "costmap", "processed_elevation"});
+        rawMap_.setBasicLayers({"elevation", "variance", "costmap", "processed_elevation", "distance"});
         fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
         clear();
 
@@ -273,7 +273,9 @@ namespace elevation_mapping {
 
         // Place back NaNs in processed elevation layer
         for (int i = 0; i < l_xIndices.size(); i++) {
-            rawMap_["processed_elevation"](l_xIndices[i], l_yIndices[i]) = NAN;
+            if (l_elevationMapImageFiltered.at<float>(l_xIndices[i], l_yIndices[i]) == 0.0) {
+                rawMap_["processed_elevation"](l_xIndices[i], l_yIndices[i]) = NAN;
+            }
         }
     }
 
