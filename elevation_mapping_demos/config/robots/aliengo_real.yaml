@@ -19,7 +19,7 @@ robot_pose_with_covariance_topic: "/pose"
 #min_update_rate: 20.0
 
 # The size (in m) of the elevation map.
-length_in_x: 7
+length_in_x: 5
 length_in_y: 3
 
 # The resolution (cell size in m/cell) of the elevation map.

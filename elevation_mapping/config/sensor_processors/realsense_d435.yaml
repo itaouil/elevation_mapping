@@ -4,7 +4,7 @@
 input_sources:
   camera: # A name to identify the input source
     type: pointcloud # Supported types: pointcloud
-    topic: /d400/depth/color/points # your topic
+    topic: /d435/depth/pointcloud # your topic
     queue_size: 1
     publish_on_update: true
     sensor_processor:

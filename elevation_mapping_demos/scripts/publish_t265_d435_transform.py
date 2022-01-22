@@ -37,9 +37,8 @@ def odom_callback(msg):
     br.sendTransform(tf.transformations.translation_from_matrix(link_to_world),
                      tf.transformations.quaternion_from_matrix(link_to_world),
                      rospy.Time.now(),
-                     "d455_link",
-                     "world")
-
+                     "d435_link",
+                     "t265_odom_frame")
 
 def main():
     global listener
@@ -57,7 +56,7 @@ def main():
     while not rospy.is_shutdown():
         try:
             # Optical to link frame transformation
-            link_to_optical = tf_buffer.lookup_transform("d455_color_optical_frame", "d455_link", rospy.Time(1))
+            link_to_optical = tf_buffer.lookup_transform("d435_depth_optical_frame", "d435_link", rospy.Time(1))
             
             # Create 4x4 numpy optical to link transformation
             link_to_optical_numpy_rot = tf.transformations.quaternion_matrix([link_to_optical.transform.rotation.x,
