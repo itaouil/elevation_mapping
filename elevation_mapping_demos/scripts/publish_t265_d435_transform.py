@@ -21,12 +21,16 @@ def odom_callback(msg):
     br = tf.TransformBroadcaster()
 
     # Create 4x4 numpy optical to world transformation
-    optical_to_world_numpy_rot = tf.transformations.quaternion_matrix([msg.pose.pose.orientation.x,
-                                                                       msg.pose.pose.orientation.y,
-                                                                       msg.pose.pose.orientation.z,
-                                                                       msg.pose.pose.orientation.w])
+    # optical_to_world_numpy_rot = tf.transformations.quaternion_matrix([msg.pose.pose.orientation.x,
+    #                                                                    msg.pose.pose.orientation.y,
+    #                                                                    msg.pose.pose.orientation.z,
+    #                                                                    msg.pose.pose.orientation.w])
+    optical_to_world_numpy_rot = tf.transformations.quaternion_matrix([0,
+                                                                       0.1218693,
+                                                                       0,
+                                                                       0.9925462])
     optical_to_world_numpy_trans = tf.transformations.translation_matrix([msg.pose.pose.position.x,
-                                                                          msg.pose.pose.position.y,
+                                                                          msg.pose.pose.position.y - 0.3012,
                                                                           msg.pose.pose.position.z])
     optical_to_world_numpy = np.dot(optical_to_world_numpy_trans, optical_to_world_numpy_rot)
 
