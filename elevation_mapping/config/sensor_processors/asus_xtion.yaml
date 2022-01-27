@@ -11,7 +11,7 @@ input_sources:
       voxelgrid_filter_size: 0.02
       ignore_points_above: inf
       ignore_points_below: -inf
-      cutoff_max_depth: inf
+      cutoff_max_depth: 3
       cutoff_min_depth: -inf
       type: structured_light # https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8768489
       normal_factor_a: 0.001063
