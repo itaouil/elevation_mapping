@@ -31,7 +31,7 @@
 
 #include "elevation_mapping/Instrumentor.h"
 
-#define PROFILING 0// 0 if profiling should be disabled
+#define PROFILING 1// 0 if profiling should be disabled
 #if PROFILING
 #define PROFILE_SCOPE(name) InstrumentationTimer timer##__LINE__(name)
 #define PROFILE_FUNCTION() PROFILE_SCOPE(__FUNCTION__)// grab function name
