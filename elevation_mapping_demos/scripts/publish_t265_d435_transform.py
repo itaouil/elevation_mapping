@@ -21,8 +21,8 @@ def odom_callback(msg):
     optical_to_world_numpy = np.dot(optical_to_world_numpy_trans, optical_to_world_numpy_rot)
 
     # Publish transform
-    br.sendTransform(tf.transformations.translation_from_matrix(link_to_world),
-                     tf.transformations.quaternion_from_matrix(link_to_world),
+    br.sendTransform(tf.transformations.translation_from_matrix(optical_to_world_numpy_trans),
+                     tf.transformations.quaternion_from_matrix(optical_to_world_numpy_rot),
                      rospy.Time.now(),
                      "d435_link",
                      "t265_odom_frame")
