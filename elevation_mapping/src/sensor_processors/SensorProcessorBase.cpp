@@ -24,8 +24,6 @@
 #include <limits>
 #include <vector>
 
-//#include "elevation_mapping/PointXYZ.hpp"
-
 // Profiling
 #include "elevation_mapping/Instrumentor.h"
 

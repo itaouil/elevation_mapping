@@ -12,7 +12,6 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 
-//#include "elevation_mapping/PointXYZ.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 
 #include "elevation_mapping/Instrumentor.h"
@@ -126,7 +125,7 @@ namespace elevation_mapping {
         // cutoff points with z values
         passThroughFilter.setInputCloud(pointCloud);
         passThroughFilter.setFilterFieldName("z");
-        passThroughFilter.setFilterLimits(0.0, 3.0);
+        passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"), sensorParameters_.at("cutoff_max_depth"));
         passThroughFilter.filter(*pointCloud);
 
         return true;
