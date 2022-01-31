@@ -8,9 +8,7 @@
 
 #include "elevation_mapping/input_sources/Input.hpp"
 
-#include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
-#include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 
 namespace elevation_mapping {
@@ -91,10 +89,6 @@ bool Input::configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue
   std::string sensorType = static_cast<std::string>(parameters["sensor_processor"]["type"]);
   if (sensorType == "structured_light") {
     sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
-  } else if (sensorType == "stereo") {
-    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
-  } else if (sensorType == "laser") {
-    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
   } else if (sensorType == "perfect") {
     sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
   } else {

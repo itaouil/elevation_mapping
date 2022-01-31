@@ -78,7 +78,7 @@ PCL_EXPORTS std::ostream& operator<<(std::ostream& os, const PointXYZRGBConfiden
 }  // namespace pcl
 
 namespace elevation_mapping {
-using PointCloudType = pcl::PointCloud<pcl::PointXYZRGBConfidenceRatio>;
+using PointCloudType = pcl::PointCloud<pcl::PointXYZ>;
 }  // namespace elevation_mapping
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pcl::_PointXYZRGBConfidenceRatio,             // here we assume a XYZ + "confidence_ratio" (as fields)

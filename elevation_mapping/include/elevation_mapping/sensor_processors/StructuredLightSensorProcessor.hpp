@@ -9,7 +9,7 @@
 #pragma once
 
 #include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
-#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+//#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 
 namespace elevation_mapping {
 
@@ -52,6 +52,6 @@ class StructuredLightSensorProcessor : public SensorProcessorBase {
    * @param pointCloud the point cloud to filter.
    * @return true if successful.
    */
-  bool filterPointCloudSensorType(const PointCloudType::Ptr pointCloud) override;
+  bool filterPointCloudSensorType(PointCloudType::Ptr pointCloud) override;
 };
 } /* namespace elevation_mapping */

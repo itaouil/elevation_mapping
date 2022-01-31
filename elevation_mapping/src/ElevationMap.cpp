@@ -94,12 +94,6 @@ namespace elevation_mapping {
     bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf &pointCloudVariances,
                            const ros::Time &timestamp,
                            const Eigen::Affine3d &transformationSensorToMap) {
-//        if (static_cast<unsigned int>(pointCloud->size()) != static_cast<unsigned int>(pointCloudVariances.size())) {
-//            ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.", (int) pointCloud->size(),
-//                      (int) pointCloudVariances.size());
-//            return false;
-//        }
-
         // Initialization for time calculation.
         const ros::WallTime methodStartTime(ros::WallTime::now());
         const ros::Time currentTime(ros::Time::now());
@@ -114,18 +108,8 @@ namespace elevation_mapping {
         const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
         // Store references for efficient interaction.
-        auto &elevationLayer = rawMap_["elevation"];
-        auto &varianceLayer = rawMap_["variance"];
-        auto &horizontalVarianceXLayer = rawMap_["horizontal_variance_x"];
-        auto &horizontalVarianceYLayer = rawMap_["horizontal_variance_y"];
-        auto &horizontalVarianceXYLayer = rawMap_["horizontal_variance_xy"];
-        auto &colorLayer = rawMap_["color"];
         auto &timeLayer = rawMap_["time"];
-        auto &dynamicTimeLayer = rawMap_["dynamic_time"];
-        auto &lowestScanPointLayer = rawMap_["lowest_scan_point"];
-        auto &sensorXatLowestScanLayer = rawMap_["sensor_x_at_lowest_scan"];
-        auto &sensorYatLowestScanLayer = rawMap_["sensor_y_at_lowest_scan"];
-        auto &sensorZatLowestScanLayer = rawMap_["sensor_z_at_lowest_scan"];
+        auto &elevationLayer = rawMap_["elevation"];
 
         // Push all basic map layers to vector
         std::vector<Eigen::Ref<const grid_map::Matrix>> basicLayers_;
@@ -147,22 +131,9 @@ namespace elevation_mapping {
             }
 
             // Extract point elevation
+            auto &time = timeLayer(index(0), index(1));
             auto &elevation = elevationLayer(index(0), index(1));
 
-            // Can I possibly remove all this?
-            auto &variance = varianceLayer(index(0), index(1));
-            auto &horizontalVarianceX = horizontalVarianceXLayer(index(0), index(1));
-            auto &horizontalVarianceY = horizontalVarianceYLayer(index(0), index(1));
-            auto &horizontalVarianceXY = horizontalVarianceXYLayer(index(0), index(1));
-            auto &color = colorLayer(index(0), index(1));
-            auto &time = timeLayer(index(0), index(1));
-            auto &dynamicTime = dynamicTimeLayer(index(0), index(1));
-            auto &lowestScanPoint = lowestScanPointLayer(index(0), index(1));
-            auto &sensorXatLowestScan = sensorXatLowestScanLayer(index(0), index(1));
-            auto &sensorYatLowestScan = sensorYatLowestScanLayer(index(0), index(1));
-            auto &sensorZatLowestScan = sensorZatLowestScanLayer(index(0), index(1));
-
-//            const float &pointVariance = pointCloudVariances(i);
             const float &pointVariance = 0;
             bool isValid = std::all_of(basicLayers_.begin(), basicLayers_.end(),
                                        [&](Eigen::Ref<const grid_map::Matrix> layer) {
@@ -171,55 +142,18 @@ namespace elevation_mapping {
             if (!isValid) {
                 // No prior information in elevation map, use measurement.
                 elevation = point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
-                variance = pointVariance;
-                horizontalVarianceX = minHorizontalVariance_;
-                horizontalVarianceY = minHorizontalVariance_;
-                horizontalVarianceXY = 0.0;
-                grid_map::colorVectorToValue(point.getRGBVector3i(), color);
                 continue;
             }
 
-            // Deal with multiple heights in one cell.
-            const double mahalanobisDistance =
-                    fabs(point.z - elevation) / sqrt(variance);// NOLINT(cppcoreguidelines-pro-type-union-access)
-            if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
-                if (scanTimeSinceInitialization - time <= scanningDuration_ &&
-                    elevation > point.z) {// NOLINT(cppcoreguidelines-pro-type-union-access)
-                    // Ignore point if measurement is from the same point cloud (time comparison) and
-                    // if measurement is lower then the elevation in the map.
-                } else if (scanTimeSinceInitialization - time <= scanningDuration_) {
-                    // If point is higher.
-                    elevation = 0.9 * elevation + 0.1 * point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
-                    variance = pointVariance;
-                } else {
-                    variance += multiHeightNoise_;
-                }
+            if (scanTimeSinceInitialization - time <= scanningDuration_ && elevation > point.z) {
+                // Ignore point if measurement is from the same point cloud (time comparison) and
+                // if measurement is lower then the elevation in the map.
+            } else if (scanTimeSinceInitialization - time <= scanningDuration_) {
+                // If point is higher.
+                elevation = 0.9 * elevation + 0.1 * point.z;// NOLINT(cppcoreguidelines-pro-type-union-access)
             }
 
-            // Store lowest points from scan for visibility checking.
-            const float pointHeightPlusUncertainty =
-                    point.z + 3.0 * sqrt(pointVariance);// 3 sigma. // NOLINT(cppcoreguidelines-pro-type-union-access)
-            if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint) {
-                lowestScanPoint = pointHeightPlusUncertainty;
-                const grid_map::Position3 sensorTranslation(transformationSensorToMap.translation());
-                sensorXatLowestScan = sensorTranslation.x();
-                sensorYatLowestScan = sensorTranslation.y();
-                sensorZatLowestScan = sensorTranslation.z();
-            }
-
-            // Fuse measurement with elevation map data.
-//            elevation =
-//                    (variance * point.z + pointVariance * elevation) / (variance + pointVariance);// NOLINT(cppcoreguidelines-pro-type-union-access)
-//            variance = (pointVariance * variance) / (pointVariance + variance);
-            // TODO(max): Add color fusion.
-            grid_map::colorVectorToValue(point.getRGBVector3i(), color);
             time = scanTimeSinceInitialization;
-            dynamicTime = currentTimeSecondsPattern;
-
-            // Horizontal variances are reset.
-            horizontalVarianceX = minHorizontalVariance_;
-            horizontalVarianceY = minHorizontalVariance_;
-            horizontalVarianceXY = 0.0;
         }
 
         clean();

@@ -70,7 +70,7 @@ class SensorProcessorBase {
    * @param[out] variances the measurement variances expressed in the target frame.
    * @return true if successful.
    */
-  bool process(const PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+  bool process(const PointCloudType::Ptr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
                const PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame);
 
   /*!
@@ -93,7 +93,7 @@ class SensorProcessorBase {
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  bool filterPointCloud(const PointCloudType::Ptr pointCloud);
+  bool filterPointCloud(const PointCloudType::Ptr pointCloudInput);
 
   /*!
    * Sensor specific point cloud cleaning.
@@ -127,7 +127,7 @@ class SensorProcessorBase {
    * @param[in] targetFrame the desired target frame.
    * @return true if successful.
    */
-  bool transformPointCloud(PointCloudType::ConstPtr pointCloud, PointCloudType::Ptr pointCloudTransformed, const std::string& targetFrame);
+  bool transformPointCloud(const PointCloudType::ConstPtr pointCloud, PointCloudType::Ptr pointCloudTransformed, const std::string& targetFrame);
 
   /*!
    * Removes points with z-coordinate above a limit in map frame.

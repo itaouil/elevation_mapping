@@ -24,7 +24,7 @@
 #include <limits>
 #include <vector>
 
-#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+//#include "elevation_mapping/PointXYZ.hpp"
 
 // Profiling
 #include "elevation_mapping/Instrumentor.h"
@@ -67,7 +67,7 @@ bool SensorProcessorBase::readParameters() {
     return true;
 }
 
-bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6> &robotPoseCovariance,
+bool SensorProcessorBase::process(const PointCloudType::Ptr pointCloudInput, const Eigen::Matrix<double, 6, 6> &robotPoseCovariance,
                                   const PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf &variances, std::string sensorFrame) {
     PROFILE_FUNCTION();
 
@@ -81,12 +81,12 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
         return false;
     }
 
+    // Downsample pointcloud
+    filterPointCloud(pointCloudInput);
+
     // Transform into sensor frame.
     PointCloudType::Ptr pointCloudSensorFrame(new PointCloudType);
     transformPointCloud(pointCloudInput, pointCloudSensorFrame, sensorFrameId_);
-
-    // Remove Nans (optional voxel grid filter)
-    filterPointCloud(pointCloudSensorFrame);
 
     // Specific filtering per sensor type
     filterPointCloudSensorType(pointCloudSensorFrame);
@@ -99,8 +99,6 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
     std::vector<PointCloudType::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});
     removePointsOutsideLimits(pointCloudMapFrame, pointClouds);
 
-    // Compute variances
-//    return computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances);
     return true;
 }
 
@@ -141,7 +139,7 @@ bool SensorProcessorBase::updateTransformations(const ros::Time &timeStamp) {
     }
 }
 
-bool SensorProcessorBase::transformPointCloud(PointCloudType::ConstPtr pointCloud, PointCloudType::Ptr pointCloudTransformed,
+bool SensorProcessorBase::transformPointCloud(const PointCloudType::ConstPtr pointCloud, PointCloudType::Ptr pointCloudTransformed,
                                               const std::string &targetFrame) {
     PROFILE_FUNCTION();
 
@@ -177,7 +175,7 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
     ROS_DEBUG("Limiting point cloud to the height interval of [%f, %f] relative to the robot base.", ignorePointsLowerThreshold_,
               ignorePointsUpperThreshold_);
 
-    pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter(true);
+    pcl::PassThrough<pcl::PointXYZ> passThroughFilter(true);
     passThroughFilter.setInputCloud(reference);
     passThroughFilter.setFilterFieldName("z");// TODO(max): Should this be configurable?
     double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + ignorePointsLowerThreshold_;
@@ -187,7 +185,7 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
     passThroughFilter.filter(*insideIndeces);
 
     for (auto &pointCloud : pointClouds) {
-        pcl::ExtractIndices<pcl::PointXYZRGBConfidenceRatio> extractIndicesFilter;
+        pcl::ExtractIndices<pcl::PointXYZ> extractIndicesFilter;
         extractIndicesFilter.setInputCloud(pointCloud);
         extractIndicesFilter.setIndices(insideIndeces);
         PointCloudType tempPointCloud;
@@ -198,32 +196,22 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
     ROS_DEBUG("removePointsOutsideLimits() reduced point cloud to %i points.", (int) pointClouds[0]->size());
 }
 
-bool SensorProcessorBase::filterPointCloud(const PointCloudType::Ptr pointCloud) {
+bool SensorProcessorBase::filterPointCloud(const PointCloudType::Ptr pointCloudInput) {
     PROFILE_FUNCTION();
-
-    PointCloudType tempPointCloud;
-
-    // Remove nan points.
-    std::vector<int> indices;
-    if (!pointCloud->is_dense) {
-        PROFILE_SCOPE("Remove nans");
-        pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
-        tempPointCloud.is_dense = true;
-        pointCloud->swap(tempPointCloud);
-    }
 
     // Reduce points using VoxelGrid filter.
     if (applyVoxelGridFilter_) {
+        PointCloudType downsampledPointCloud;
         PROFILE_SCOPE("Voxel grid filter");
-        pcl::VoxelGrid<pcl::PointXYZRGBConfidenceRatio> voxelGridFilter;
-        voxelGridFilter.setInputCloud(pointCloud);
+        pcl::VoxelGrid<pcl::PointXYZ> voxelGridFilter;
+        voxelGridFilter.setInputCloud(pointCloudInput);
         double filter_size = sensorParameters_.at("voxelgrid_filter_size");
         voxelGridFilter.setLeafSize(filter_size, filter_size, filter_size);
-        voxelGridFilter.filter(tempPointCloud);
-        pointCloud->swap(tempPointCloud);
+        voxelGridFilter.filter(downsampledPointCloud);
+        pointCloudInput->swap(downsampledPointCloud);
     }
 
-    ROS_DEBUG_THROTTLE(2, "cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+    ROS_DEBUG_THROTTLE(2, "cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloudInput->size()));
     return true;
 }
 

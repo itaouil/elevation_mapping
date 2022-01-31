@@ -12,7 +12,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 
-#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+//#include "elevation_mapping/PointXYZ.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 
 #include "elevation_mapping/Instrumentor.h"
@@ -82,7 +82,7 @@ namespace elevation_mapping {
 
             // Preparation.
             auto &point = pointCloud->points[i];
-            const float &confidenceRatio = point.confidence_ratio;
+            const float &confidenceRatio = 0.0;
             Eigen::Vector3f pointVector(point.x, point.y, point.z);// S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
 
             // Measurement distance.
@@ -118,18 +118,16 @@ namespace elevation_mapping {
         return true;
     }
 
-    bool StructuredLightSensorProcessor::filterPointCloudSensorType(const PointCloudType::Ptr pointCloud) {
+    bool StructuredLightSensorProcessor::filterPointCloudSensorType(PointCloudType::Ptr pointCloud) {
         PROFILE_FUNCTION();
 
-        pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter;
-        PointCloudType tempPointCloud;
+        pcl::PassThrough<pcl::PointXYZ> passThroughFilter;
 
         // cutoff points with z values
         passThroughFilter.setInputCloud(pointCloud);
         passThroughFilter.setFilterFieldName("z");
-        passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"), sensorParameters_.at("cutoff_max_depth"));
-        passThroughFilter.filter(tempPointCloud);
-        pointCloud->swap(tempPointCloud);
+        passThroughFilter.setFilterLimits(0.0, 3.0);
+        passThroughFilter.filter(*pointCloud);
 
         return true;
     }

@@ -24,9 +24,7 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/ElevationMapping.hpp"
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
-#include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
-#include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 
 #include "elevation_mapping/Instrumentor.h"
@@ -293,10 +291,6 @@ bool ElevationMapping::readParameters() {
                                                                         mapFrameId_};
     if (sensorType == "structured_light") {
         sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
-    } else if (sensorType == "stereo") {
-        sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
-    } else if (sensorType == "laser") {
-        sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
     } else if (sensorType == "perfect") {
         sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
     } else {

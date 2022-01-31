@@ -45,7 +45,7 @@ public:
     {
     }
 
-    void BeginSession(const std::string& name, const std::string& filepath = "/home/unitree/workspace/catkin_ws/src/elevation_mapping/profiles/results.json")
+    void BeginSession(const std::string& name, const std::string& filepath = "/home/itaouil/workspace/code/thesis_ws/src/elevation_mapping/profiles/results.json")
     {
         m_OutputStream.open(filepath);
         WriteHeader();

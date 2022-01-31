@@ -76,9 +76,7 @@ add_library(${PROJECT_NAME}_library
   src/RobotMotionMapUpdater.cpp
   src/sensor_processors/SensorProcessorBase.cpp
   src/sensor_processors/StructuredLightSensorProcessor.cpp
-  src/sensor_processors/StereoSensorProcessor.cpp
-  src/sensor_processors/LaserSensorProcessor.cpp
-  src/sensor_processors/PerfectSensorProcessor.cpp
+        src/sensor_processors/PerfectSensorProcessor.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}_library
