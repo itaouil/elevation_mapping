@@ -13,7 +13,7 @@ input_sources:
       ignore_points_above: inf
       ignore_points_below: -inf
       cutoff_max_depth: inf
-      cutoff_min_depth: -inf
+      cutoff_min_depth: 0.3
       type: structured_light # https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8768489
       normal_factor_a: 0.001063
       normal_factor_b: 0.003949
