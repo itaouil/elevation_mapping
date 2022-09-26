@@ -1,16 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Imports
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
-max_height = 0.0
-
 
 def odom_callback(msg, arg):
-    global max_height
-
     publisher = arg
 
     # New PWCS message
